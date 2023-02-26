@@ -40,7 +40,7 @@ const char* collect_lexemme(Lexer* lex) {
     return (const char*)lexemme;
 }
 
-Token collect_number(Lexer* lex) {
+bool collect_number(Lexer* lex, Token* result) {
     size_t line = lex->line;
     size_t column = lex->column;
 
@@ -48,17 +48,18 @@ Token collect_number(Lexer* lex) {
     const char* lexemme = collect_lexemme(lex);
     int value = atoi(lexemme);
     free((void*)lexemme);
-    return (Token) {
+    *result = (Token) {
         .type = TOK_INT,
         .value = value,
         .source_path = lex->source_path,
         .line = line,
         .column = column,
     };
+    return true;
 }
 
-Token collect_symbol(Lexer* lex) {
-    Token tok = (Token) {
+bool collect_symbol(Lexer* lex, Token* result) {
+    *result = (Token) {
         .source_path = lex->source_path,
         .line = lex->line,
         .column = lex->column,
@@ -68,42 +69,41 @@ Token collect_symbol(Lexer* lex) {
 
     switch(c) {
         case '(':
-            tok.type = TOK_LEFT_PAREN;
+            result->type = TOK_LEFT_PAREN;
             break;
         case ')':
-            tok.type = TOK_RIGHT_PAREN;
+            result->type = TOK_RIGHT_PAREN;
             break;
         case '+':
-            tok.type = TOK_PLUS;
+            result->type = TOK_PLUS;
             break;
         case '-':
-            tok.type = TOK_MINUS;
+            result->type = TOK_MINUS;
             break;
         case '*':
-            tok.type = TOK_STAR;
+            result->type = TOK_STAR;
             break;
         case '/':
-            tok.type = TOK_SLASH;
+            result->type = TOK_SLASH;
             break;
         case '\0':
-            tok.type = TOK_EOF;
+            result->type = TOK_EOF;
             break;
         default:
             fprintf(stderr, "%s:%lu:%lu: error: unknown symbol '%c'\n", lex->source_path, lex->line + 1, lex->column + 1, c);
-            tok.type = TOK_ERROR;
-            break;
+            return false;
     }
 
-    return tok;
+    return true;
 }
 
-Token lexer_collect_token(Lexer* lex) {
+bool lexer_collect_token(Lexer* lex, Token* result) {
     skip_whitespace(lex);
 
     const char c = peek(lex);
     if(isalnum(c)) {
-        return collect_number(lex);
+        return collect_number(lex, result);
     } else {
-        return collect_symbol(lex);
+        return collect_symbol(lex, result);
     }
 }

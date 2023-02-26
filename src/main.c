@@ -35,7 +35,8 @@ int main(int argc, char* argv[]) {
 
     Token token;
     do {
-        token = lexer_collect_token(&lexer);
+        if(!lexer_collect_token(&lexer, &token))
+            continue;
 
         printf("%s:%lu:%lu: %s",
             token.source_path,

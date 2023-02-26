@@ -1,6 +1,7 @@
 #ifndef LEXER_H
 #define LEXER_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "token.h"
@@ -13,6 +14,6 @@ typedef struct {
     size_t line, column;
 } Lexer;
 
-Token lexer_collect_token(Lexer* lex);
+bool lexer_collect_token(Lexer* lex, Token* result);
 
 #endif // LEXER_H
