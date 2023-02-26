@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "expr.h"
 #include "lexer.h"
+#include "parser.h"
 #include "token.h"
 
 int main(int argc, char* argv[]) {
@@ -33,25 +35,53 @@ int main(int argc, char* argv[]) {
         .source_path = source_path,
     };
 
-    Token token;
+    Token* tokens = NULL;
+    size_t n_tokens = 0;
+    Token current_token;
+    bool has_error = false;
+
     do {
-        if(!lexer_collect_token(&lexer, &token))
+        if(!lexer_collect_token(&lexer, &current_token)) {
+            has_error = true;
             continue;
-
-        printf("%s:%lu:%lu: %s",
-            token.source_path,
-            token.line + 1,
-            token.column + 1,
-            token_strs[token.type]
-        );
-
-        if(token.type == TOK_INT) {
-            printf(" = %i\n", token.value);
-        } else {
-            printf("\n");
         }
-    } while(token.type != TOK_EOF);
 
+        tokens = realloc(tokens, sizeof(Token) * (n_tokens + 1));
+        tokens[n_tokens++] = current_token;
+    } while(current_token.type != TOK_EOF);
+    
     free(source);
+
+    if(has_error) {
+        free(tokens);
+        return EXIT_FAILURE;
+    }
+
+    Parser parser = (Parser) { .tokens = tokens };
+
+    Expr** exprs = NULL;
+    size_t n_exprs = 0;
+    Expr* current_expr;
+
+    while(!parser_reached_end(&parser)) {
+        current_expr = parser_collect_expr(&parser);
+        if(!current_expr) {
+            has_error = true;
+            continue;
+        }
+
+        exprs = realloc(exprs, sizeof(Expr*) * (n_exprs + 1));
+        exprs[n_exprs++] = current_expr;
+    }
+    free(tokens);
+
+    for(size_t i = 0; i < n_exprs; ++i) {
+        if(!has_error) {
+            expr_print(exprs[i]);
+        }
+        expr_free(exprs[i]);
+    }
+    free(exprs);
+
     return EXIT_SUCCESS;
 }
