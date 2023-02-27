@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "codegen.h"
 #include "expr.h"
 #include "lexer.h"
 #include "parser.h"
@@ -75,10 +76,9 @@ int main(int argc, char* argv[]) {
     }
     free(tokens);
 
+    generate_assembly(exprs, n_exprs, "output.asm");
+
     for(size_t i = 0; i < n_exprs; ++i) {
-        if(!has_error) {
-            expr_print(exprs[i]);
-        }
         expr_free(exprs[i]);
     }
     free(exprs);
