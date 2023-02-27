@@ -45,7 +45,15 @@ static void write_preamble(FILE* out) {
 
 static int write_literal(Expr* expr, FILE* out) {
     const int reg = allocate_register();
-    fprintf(out, "mov %s, %i\n", registers[reg], expr->literal.tok.value);
+    switch(expr->literal.value.tag) {
+        case VAL_INT:
+            fprintf(out, "mov %s, %i\n", registers[reg], expr->literal.value.val_int);
+            break;
+        case VAL_BOOL:
+            fprintf(out, "mov %s, %i\n", registers[reg], expr->literal.value.val_bool);
+            break;
+    }
+
     return reg;
 }
 

@@ -13,14 +13,14 @@ typedef enum {
 typedef struct _Expr {
     ExprTag tag;
     union {
-        struct { Token tok; } literal;
+        struct { Value value; } literal;
         struct { Token op; struct _Expr* rhs; } unary;
         struct { struct _Expr* lhs; Token op; struct _Expr* rhs; } binary;
         struct { struct _Expr* expr; } grouping;
     };
 } Expr;
 
-Expr* expr_create_literal(Token tok);
+Expr* expr_create_literal(Value value);
 Expr* expr_create_unary(Token op, Expr* rhs);
 Expr* expr_create_binary(Expr* lhs, Token op, Expr* rhs);
 Expr* expr_create_grouping(Expr* expr);

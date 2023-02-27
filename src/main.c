@@ -6,6 +6,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "token.h"
+#include "typecheck.h"
 
 int main(int argc, char* argv[]) {
     if(argc < 2) {
@@ -76,7 +77,9 @@ int main(int argc, char* argv[]) {
     }
     free(tokens);
 
-    generate_assembly(exprs, n_exprs, "output.asm");
+    if(typecheck_exprs(exprs, n_exprs)) {
+        generate_assembly(exprs, n_exprs, "output.asm");
+    }
 
     for(size_t i = 0; i < n_exprs; ++i) {
         expr_free(exprs[i]);

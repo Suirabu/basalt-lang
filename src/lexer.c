@@ -46,7 +46,10 @@ bool collect_number(Lexer* lex, Token* result) {
 
     // TODO: Validate lexemme before converting to integer
     const char* lexemme = collect_lexemme(lex);
-    int value = atoi(lexemme);
+    Value value = (Value) {
+        .tag = VAL_INT,
+        .val_int = atoi(lexemme),
+    };
     free((void*)lexemme);
     *result = (Token) {
         .type = TOK_INT,
@@ -55,6 +58,38 @@ bool collect_number(Lexer* lex, Token* result) {
         .line = line,
         .column = column,
     };
+    return true;
+}
+
+bool collect_keyword(Lexer* lex, Token* result) {
+    size_t line = lex->line;
+    size_t column = lex->column;
+
+    *result = (Token) {
+        .source_path = lex->source_path,
+        .line = lex->line,
+        .column = lex->column,
+    };
+
+    const char* lexemme = collect_lexemme(lex);
+
+    if(strcmp(lexemme, "true") == 0) {
+        result->type = TOK_BOOL;
+        result->value = (Value) {
+            .tag = VAL_BOOL,
+            .val_bool = true,
+        };
+    } else if(strcmp(lexemme, "false") == 0) {
+        result->type = TOK_BOOL;
+        result->value = (Value) {
+            .tag = VAL_BOOL,
+            .val_bool = false,
+        };
+    } else {
+        fprintf(stderr, "%s:%lu:%lu: error: unknown keyword '%s'\n", lex->source_path, lex->line + 1, lex->column + 1, lexemme);
+        return false;
+    }
+
     return true;
 }
 
@@ -101,8 +136,10 @@ bool lexer_collect_token(Lexer* lex, Token* result) {
     skip_whitespace(lex);
 
     const char c = peek(lex);
-    if(isalnum(c)) {
+    if(isdigit(c)) {
         return collect_number(lex, result);
+    } else if(isalnum(c)) {
+        return collect_keyword(lex, result);
     } else {
         return collect_symbol(lex, result);
     }
