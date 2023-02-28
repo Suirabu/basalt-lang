@@ -38,6 +38,9 @@ Expr* expr_create_grouping(Expr* expr) {
 void expr_free(Expr* expr) {
     switch(expr->tag) {
         case EXPR_LITERAL:
+            if(expr->literal.value.tag == VAL_STRING) {
+                free((void*)expr->literal.value.val_string);
+            }
             break;
         case EXPR_UNARY:
             expr_free(expr->unary.rhs);
@@ -65,10 +68,20 @@ static void value_print_with_indent(Value value, size_t indent) {
     for(size_t i = 0; i < indent; ++i) {
         printf("\033[2m.\033[0m");
     }
-    if(value.tag == VAL_INT) {
-        printf("int = %i\n", value.val_int);
-    } else if(value.tag == VAL_BOOL) {
-        printf("bool = %s\n", value.val_bool ? "true" : "false");
+
+    switch(value.tag) {
+        case VAL_INT:
+            printf("int = %i\n", value.val_int);
+            break;
+        case VAL_BOOL:
+            printf("bool = %s\n", value.val_bool ? "true" : "false");
+            break;
+        case VAL_STRING:
+            printf("string = %s\n", value.val_string);
+            break;
+        case VAL_ERROR:
+            fprintf(stderr, "error: cannot print erroneous value\n");
+            break;
     }
 }
 

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "global.h"
 #include "lexer.h"
 #include "token.h"
 
@@ -38,6 +39,48 @@ const char* collect_lexemme(Lexer* lex) {
     memcpy(lexemme, lex->source + start, len);
     lexemme[len] = '\0';
     return (const char*)lexemme;
+}
+
+bool collect_string(Lexer* lex, Token* result) {
+    size_t line = lex->line;
+    size_t column = lex->column;
+
+    advance(lex); // Skip leading double-quote
+    const size_t start = lex->sp;
+
+    // TODO: Handle escape sequences ('\n', '\t', etc.)
+    while(!reached_end(lex) && peek(lex) != '"')
+        advance(lex);
+
+    if(reached_end(lex)) {
+        fprintf(stderr, "%s:%lu:%lu: error: expected trailing double-quote, found eof instead\n",
+            lex->source_path, line + 1, column + 1
+        );
+        return false;
+    }
+
+    const size_t end = lex->sp;
+    advance(lex); // Skip trailing double-quote
+
+    const size_t len = end - start;
+    char* string = malloc(len + 1);
+    memcpy(string, lex->source + start, len);
+    string[len] = '\0';
+
+    Value value = (Value) {
+        .tag = VAL_STRING,
+        .val_string = string,
+    };
+    value.global_id = global_add(value);
+
+    *result = (Token) {
+        .type = TOK_STRING,
+        .value = value,
+        .source_path = lex->source_path,
+        .line = line,
+        .column = column,
+    };
+    return true;
 }
 
 bool collect_number(Lexer* lex, Token* result) {
@@ -136,7 +179,9 @@ bool lexer_collect_token(Lexer* lex, Token* result) {
     skip_whitespace(lex);
 
     const char c = peek(lex);
-    if(isdigit(c)) {
+    if(c == '"') {
+        return collect_string(lex, result);
+    } else if(isdigit(c)) {
         return collect_number(lex, result);
     } else if(isalnum(c)) {
         return collect_keyword(lex, result);

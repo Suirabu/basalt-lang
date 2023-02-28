@@ -3,6 +3,7 @@
 
 #include "codegen.h"
 #include "expr.h"
+#include "global.h"
 #include "lexer.h"
 #include "parser.h"
 #include "token.h"
@@ -85,6 +86,8 @@ int main(int argc, char* argv[]) {
         expr_free(exprs[i]);
     }
     free(exprs);
+
+    global_free_all();
 
     return EXIT_SUCCESS;
 }

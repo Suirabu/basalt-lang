@@ -45,7 +45,7 @@ static bool expect(Parser* par, TokenType type) {
 }
 
 Expr* collect_primary(Parser* par) {
-    if(match(par, TOK_INT) || match(par, TOK_BOOL)) {
+    if(match(par, TOK_INT) || match(par, TOK_BOOL) || match(par, TOK_STRING)) {
         return expr_create_literal(previous(par).value);
     }
 

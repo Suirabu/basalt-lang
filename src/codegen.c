@@ -4,6 +4,7 @@
 
 #include "codegen.h"
 #include "expr.h"
+#include "global.h"
 #include "token.h"
 
 static const char* registers[] = {
@@ -35,6 +36,20 @@ static void free_register(int reg) {
 
 static int write_assembly_for_expr(Expr* expr, FILE* out);
 
+static void write_globals(FILE* out) {
+    fprintf(out, "section .bss\n");
+
+    for(size_t i = 0; i < n_global_values; ++i) {
+        // For now we can assume that all global values are strings, but this won't be the case for long
+        // TODO: Switch on value tag instead of assuming all globals will be strings
+        fprintf(out,
+            "str_%lu: db \"%s\", 0\n",
+            global_values[i].global_id,
+            global_values[i].val_string
+        );
+    }
+}
+
 static void write_preamble(FILE* out) {
     fprintf(out,
         "section .text\n"
@@ -52,6 +67,12 @@ static int write_literal(Expr* expr, FILE* out) {
         case VAL_BOOL:
             fprintf(out, "mov %s, %i\n", registers[reg], expr->literal.value.val_bool);
             break;
+        case VAL_STRING:
+            fprintf(out, "mov %s, str_%lu\n", registers[reg], expr->literal.value.global_id);
+            break;
+        case VAL_ERROR:
+            fprintf(stderr, "error: cannot generate code for erroneous value\n");
+            return -1;
     }
 
     return reg;
@@ -131,6 +152,7 @@ bool generate_assembly(Expr** exprs, size_t n_exprs, const char* output_path) {
         return false;
     }
 
+    write_globals(output_file);
     write_preamble(output_file);
 
     for(size_t i = 0; i < n_exprs; ++i) {

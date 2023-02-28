@@ -3,6 +3,7 @@
 const char* token_strs[] = {
     "int",
     "bool",
+    "string",
     "left paren",
     "right paren",
     "plus",
@@ -16,4 +17,5 @@ const char* token_strs[] = {
 const char* type_strs[] = {
     "int",
     "bool",
+    "string",
 };

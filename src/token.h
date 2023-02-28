@@ -10,20 +10,24 @@ extern const char* type_strs[];
 typedef enum {
     VAL_INT,
     VAL_BOOL,
+    VAL_STRING,
     VAL_ERROR, // Hack needed for type checking
 } ValueTag;
 
 typedef struct {
     ValueTag tag;
+    size_t global_id;
     union {
         struct { int val_int; };
         struct { bool val_bool; };
+        struct { const char* val_string; };
     };
 } Value;
 
 typedef enum {
     TOK_INT,
     TOK_BOOL,
+    TOK_STRING,
 
     TOK_LEFT_PAREN,
     TOK_RIGHT_PAREN,
