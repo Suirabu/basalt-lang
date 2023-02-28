@@ -119,6 +119,78 @@ static int write_binary(Expr* expr, FILE* out) {
                 registers[lhs_reg]
             );
             break;
+        case TOK_EQUAL_EQUAL:
+            fprintf(out, 
+                "    cmp %s, %s\n"
+                "    mov %s, 0\n"
+                "    mov rax, 1\n"
+                "    cmove %s, rax\n",
+                registers[lhs_reg],
+                registers[rhs_reg],
+                registers[lhs_reg],
+                registers[lhs_reg]
+            );
+            break;
+         case TOK_BANG_EQUAL:
+            fprintf(out, 
+                "    cmp %s, %s\n"
+                "    mov %s, 0\n"
+                "    mov rax, 1\n"
+                "    cmovne %s, rax\n",
+                registers[lhs_reg],
+                registers[rhs_reg],
+                registers[lhs_reg],
+                registers[lhs_reg]
+            );
+            break;
+        case TOK_LESS:
+            fprintf(out, 
+                "    cmp %s, %s\n"
+                "    mov %s, 0\n"
+                "    mov rax, 1\n"
+                "    cmovl %s, rax\n",
+                registers[lhs_reg],
+                registers[rhs_reg],
+                registers[lhs_reg],
+                registers[lhs_reg]
+            );
+            break;
+        case TOK_LESS_EQUAL:
+            fprintf(out, 
+                "    cmp %s, %s\n"
+                "    mov %s, 0\n"
+                "    mov rax, 1\n"
+                "    cmovle %s, rax\n",
+                registers[lhs_reg],
+                registers[rhs_reg],
+                registers[lhs_reg],
+                registers[lhs_reg]
+            );
+            break;
+        case TOK_GREATER:
+            fprintf(out, 
+                "    cmp %s, %s\n"
+                "    mov %s, 0\n"
+                "    mov rax, 1\n"
+                "    cmovg %s, rax\n",
+                registers[lhs_reg],
+                registers[rhs_reg],
+                registers[lhs_reg],
+                registers[lhs_reg]
+            );
+            break;
+        case TOK_GREATER_EQUAL:
+            fprintf(out, 
+                "    cmp %s, %s\n"
+                "    mov %s, 0\n"
+                "    mov rax, 1\n"
+                "    cmovge %s, rax\n",
+                registers[lhs_reg],
+                registers[rhs_reg],
+                registers[lhs_reg],
+                registers[lhs_reg]
+            );
+            break;
         default:
             fprintf(stderr, "error: unknown binary operation '%s'\n", token_strs[expr->binary.op.type]);
             return -1;

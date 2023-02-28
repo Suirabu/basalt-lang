@@ -37,6 +37,24 @@ static ValueTag get_binary_value(Expr* expr) {
             }
             return VAL_INT;
 
+        case TOK_EQUAL_EQUAL:
+        case TOK_BANG_EQUAL:
+            if(lhs != rhs) {
+                REPORT_ERROR(op, "cannot perform %s operation on types %s and %s\n", token_strs[op.type], type_strs[lhs], type_strs[rhs]);
+                return VAL_ERROR;
+            }
+            return VAL_BOOL;
+
+        case TOK_LESS:
+        case TOK_LESS_EQUAL:
+        case TOK_GREATER:
+        case TOK_GREATER_EQUAL:
+            if(lhs != VAL_INT || rhs != VAL_INT) {
+                REPORT_ERROR(op, "cannot perform %s operation on types %s and %s\n", token_strs[op.type], type_strs[lhs], type_strs[rhs]);
+                return VAL_ERROR;
+            }
+            return VAL_BOOL;
+
         default:
             return VAL_ERROR;
     }

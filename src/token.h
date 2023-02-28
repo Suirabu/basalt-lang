@@ -32,6 +32,13 @@ typedef enum {
     TOK_LEFT_PAREN,
     TOK_RIGHT_PAREN,
 
+    TOK_EQUAL_EQUAL,
+    TOK_BANG_EQUAL,
+    TOK_LESS,
+    TOK_LESS_EQUAL,
+    TOK_GREATER,
+    TOK_GREATER_EQUAL,
+
     TOK_PLUS,
     TOK_MINUS,
     TOK_STAR,

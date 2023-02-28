@@ -152,6 +152,38 @@ bool collect_symbol(Lexer* lex, Token* result) {
         case ')':
             result->type = TOK_RIGHT_PAREN;
             break;
+        case '=':
+            if(peek(lex) != '=') {
+                fprintf(stderr, "%s:%lu:%lu: error: expected '=', found '%c' instead\n", lex->source_path, lex->line + 1, lex->column + 1, c);
+                return false;
+            }
+            advance(lex);
+            result->type = TOK_EQUAL_EQUAL;
+            break;
+        case '!':
+            if(peek(lex) != '=') {
+                fprintf(stderr, "%s:%lu:%lu: error: expected '=', found '%c' instead\n", lex->source_path, lex->line + 1, lex->column + 1, c);
+                return false;
+            }
+            advance(lex);
+            result->type = TOK_BANG_EQUAL;
+            break;
+        case '<':
+            if(peek(lex) == '=') {
+                advance(lex);
+                result->type = TOK_LESS_EQUAL;
+            } else {
+                result->type = TOK_LESS;
+            }
+            break;
+        case '>':
+            if(peek(lex) == '=') {
+                advance(lex);
+                result->type = TOK_GREATER_EQUAL;
+            } else {
+                result->type = TOK_GREATER;
+            }
+            break;
         case '+':
             result->type = TOK_PLUS;
             break;
