@@ -43,17 +43,19 @@ static void write_globals(FILE* out) {
         // For now we can assume that all global values are strings, but this won't be the case for long
         // TODO: Switch on value tag instead of assuming all globals will be strings
         fprintf(out,
-            "str_%lu: db \"%s\", 0\n",
+            "    str_%lu: db \"%s\", 0\n",
             global_values[i].global_id,
             global_values[i].val_string
         );
     }
+
+    fprintf(out, "\n");
 }
 
 static void write_preamble(FILE* out) {
     fprintf(out,
         "section .text\n"
-        "global _start\n"
+        "global _start\n\n"
         "_start:\n"
     );
 }
@@ -62,13 +64,13 @@ static int write_literal(Expr* expr, FILE* out) {
     const int reg = allocate_register();
     switch(expr->literal.value.tag) {
         case VAL_INT:
-            fprintf(out, "mov %s, %i\n", registers[reg], expr->literal.value.val_int);
+            fprintf(out, "    mov %s, %i\n", registers[reg], expr->literal.value.val_int);
             break;
         case VAL_BOOL:
-            fprintf(out, "mov %s, %i\n", registers[reg], expr->literal.value.val_bool);
+            fprintf(out, "    mov %s, %i\n", registers[reg], expr->literal.value.val_bool);
             break;
         case VAL_STRING:
-            fprintf(out, "mov %s, str_%lu\n", registers[reg], expr->literal.value.global_id);
+            fprintf(out, "    mov %s, str_%lu\n", registers[reg], expr->literal.value.global_id);
             break;
         case VAL_ERROR:
             fprintf(stderr, "error: cannot generate code for erroneous value\n");
@@ -89,29 +91,29 @@ static int write_binary(Expr* expr, FILE* out) {
 
     switch(expr->binary.op.type) {
         case TOK_PLUS:
-            fprintf(out, "add %s, %s\n",
+            fprintf(out, "    add %s, %s\n",
                 registers[lhs_reg],
                 registers[rhs_reg]
             );
             break;
         case TOK_MINUS:
-            fprintf(out, "sub %s, %s\n",
+            fprintf(out, "    sub %s, %s\n",
                 registers[lhs_reg],
                 registers[rhs_reg]
             );
             break;
         case TOK_STAR:
-            fprintf(out, "imul %s, %s\n",
+            fprintf(out, "    imul %s, %s\n",
                 registers[lhs_reg],
                 registers[rhs_reg]
             );
             break;
         case TOK_SLASH:
             fprintf(out, 
-                "mov rax, %s\n"
-                "xor rdx, rdx\n"
-                "idiv %s\n"
-                "mov %s, rax\n",
+                "    mov rax, %s\n"
+                "    xor rdx, rdx\n"
+                "    idiv %s\n"
+                "    mov %s, rax\n",
                 registers[lhs_reg],
                 registers[rhs_reg],
                 registers[lhs_reg]
