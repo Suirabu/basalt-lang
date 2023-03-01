@@ -60,6 +60,14 @@ static void write_preamble(FILE* out) {
     );
 }
 
+static void write_exit(FILE* out) {
+    fprintf(out,
+        "    mov rax, 60\n"
+        "    mov rdi, 0\n"
+        "    syscall\n"
+    );
+}
+
 static int write_literal(Expr* expr, FILE* out) {
     const int reg = allocate_register();
     switch(expr->literal.value.tag) {
@@ -259,6 +267,8 @@ bool generate_assembly(Expr** exprs, size_t n_exprs, const char* output_path) {
         if(reg != -1)
             free_register(reg); // We won't be needing this register for now
     }
+
+    write_exit(output_file);
 
     fclose(output_file);
     return true;
