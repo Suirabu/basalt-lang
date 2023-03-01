@@ -75,26 +75,8 @@ Expr* collect_unary(Parser* par) {
     return collect_primary(par);
 }
 
-Expr* collect_comparison(Parser* par) {
-    Expr* expr = collect_unary(par);
-
-    while(match(par, TOK_EQUAL_EQUAL)
-          || match(par, TOK_BANG_EQUAL)
-          || match(par, TOK_LESS)
-          || match(par, TOK_LESS_EQUAL)
-          || match(par, TOK_GREATER)
-          || match(par, TOK_GREATER_EQUAL)
-    ) {
-        Token op = previous(par);
-        Expr* rhs = collect_unary(par);
-        expr = expr_create_binary(expr, op, rhs);
-    }
-
-    return expr;
-}
-
 Expr* collect_factor(Parser* par) {
-    Expr* expr = collect_comparison(par);
+    Expr* expr = collect_unary(par);
 
     while(match(par, TOK_STAR) || match(par, TOK_SLASH)) {
         Token op = previous(par);
@@ -117,8 +99,36 @@ Expr* collect_term(Parser* par) {
     return expr;
 }
 
+Expr* collect_comparison(Parser* par) {
+    Expr* expr = collect_term(par);
+
+    while(match(par, TOK_LESS)
+          || match(par, TOK_LESS_EQUAL)
+          || match(par, TOK_GREATER)
+          || match(par, TOK_GREATER_EQUAL)
+    ) {
+        Token op = previous(par);
+        Expr* rhs = collect_unary(par);
+        expr = expr_create_binary(expr, op, rhs);
+    }
+
+    return expr;
+}
+
+Expr* collect_equality(Parser* par) {
+    Expr* expr = collect_comparison(par);
+
+    while(match(par, TOK_EQUAL_EQUAL) || match(par, TOK_BANG_EQUAL)) {
+        Token op = previous(par);
+        Expr* rhs = collect_unary(par);
+        expr = expr_create_binary(expr, op, rhs);
+    }
+
+    return expr;
+}
+
 Expr* collect_expr(Parser* par) {
-    return collect_term(par);
+    return collect_equality(par);
 }
 
 Expr* collect_if(Parser* par) {
