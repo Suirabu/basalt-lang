@@ -72,8 +72,9 @@ static int write_literal(Expr* expr, FILE* out) {
         case VAL_STRING:
             fprintf(out, "    mov %s, str_%lu\n", registers[reg], expr->literal.value.global_id);
             break;
+        case VAL_NONE:
         case VAL_ERROR:
-            fprintf(stderr, "error: cannot generate code for erroneous value\n");
+            fprintf(stderr, "error: cannot generate code for value %s\n", type_strs[expr->literal.value.tag]);
             return -1;
     }
 
@@ -204,6 +205,28 @@ static int write_grouping(Expr* expr, FILE* out) {
     return write_assembly_for_expr(expr->grouping.expr, out);
 }
 
+size_t if_counter = 0;
+
+static int write_if(Expr* expr, FILE* out) {
+    const size_t count = if_counter++;
+    int cond_reg = write_assembly_for_expr(expr->if_stmt.condition, out);
+    fprintf(out,
+        "    cmp %s, 0\n"
+        "    je _else_%lu\n",
+        registers[cond_reg], count
+    );
+    for(size_t i = 0; i < expr->if_stmt.if_body_len; ++i)
+        free_register(write_assembly_for_expr(expr->if_stmt.if_body[i], out));
+    fprintf(out, "    jmp _end_%lu\n", count);
+
+    fprintf(out, "_else_%lu:\n", count);
+    for(size_t i = 0; i < expr->if_stmt.else_body_len; ++i)
+        free_register(write_assembly_for_expr(expr->if_stmt.else_body[i], out));
+    
+    fprintf(out, "_end_%lu:\n", count);
+    return -1;
+}
+
 static int write_assembly_for_expr(Expr* expr, FILE* out) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -214,6 +237,8 @@ static int write_assembly_for_expr(Expr* expr, FILE* out) {
             return write_binary(expr, out);
         case EXPR_GROUPING:
             return write_grouping(expr, out);
+        case EXPR_IF:
+            return write_if(expr, out);
     }
 }
 
@@ -231,7 +256,8 @@ bool generate_assembly(Expr** exprs, size_t n_exprs, const char* output_path) {
 
     for(size_t i = 0; i < n_exprs; ++i) {
         const int reg = write_assembly_for_expr(exprs[i], output_file);
-        free_register(reg); // We won't be needing this register for now
+        if(reg != -1)
+            free_register(reg); // We won't be needing this register for now
     }
 
     fclose(output_file);

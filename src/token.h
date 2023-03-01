@@ -11,6 +11,7 @@ typedef enum {
     VAL_INT,
     VAL_BOOL,
     VAL_STRING,
+    VAL_NONE,
     VAL_ERROR, // Hack needed for type checking
 } ValueTag;
 
@@ -43,6 +44,11 @@ typedef enum {
     TOK_MINUS,
     TOK_STAR,
     TOK_SLASH,
+
+    TOK_IF,
+    TOK_ELSE,
+    TOK_THEN,
+    TOK_END,
 
     TOK_ERROR,
     TOK_EOF,

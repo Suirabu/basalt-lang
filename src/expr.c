@@ -35,6 +35,17 @@ Expr* expr_create_grouping(Expr* expr) {
     return result;
 }
 
+Expr* expr_create_if(Expr* condition, Expr** if_body, size_t if_body_len, Expr** else_body, size_t else_body_len) {
+    Expr* result = malloc(sizeof(Expr));
+    result->tag = EXPR_IF;
+    result->if_stmt.condition = condition;
+    result->if_stmt.if_body = if_body;
+    result->if_stmt.if_body_len = if_body_len;
+    result->if_stmt.else_body = else_body;
+    result->if_stmt.else_body_len = else_body_len;
+    return result;
+}
+
 void expr_free(Expr* expr) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -51,6 +62,13 @@ void expr_free(Expr* expr) {
             break;
         case EXPR_GROUPING:
             expr_free(expr->grouping.expr);
+            break;
+        case EXPR_IF:
+            expr_free(expr->if_stmt.condition);
+            for(size_t i = 0; i < expr->if_stmt.if_body_len; ++i)
+                expr_free(expr->if_stmt.if_body[i]);
+            for(size_t i = 0; i < expr->if_stmt.else_body_len; ++i)
+                expr_free(expr->if_stmt.else_body[i]);
             break;
     }
 

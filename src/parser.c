@@ -61,6 +61,7 @@ Expr* collect_primary(Parser* par) {
         tok.source_path, tok.line + 1, tok.column + 1,
         token_strs[tok.type]
     );
+    exit(1);
     return NULL;
 }
 
@@ -116,10 +117,64 @@ Expr* collect_term(Parser* par) {
     return expr;
 }
 
+Expr* collect_expr(Parser* par) {
+    return collect_term(par);
+}
+
+Expr* collect_if(Parser* par) {
+    Expr* condition = collect_expr(par);
+    if(!expect(par, TOK_THEN))
+        return NULL;
+    
+    Expr** if_body = NULL;
+    size_t if_body_len = 0;
+    while(!(match(par, TOK_END) || match(par, TOK_ELSE))) {
+        Expr* expr = collect_expr(par);
+        if(!expr)
+            return NULL;
+        if_body = realloc(if_body, sizeof(Expr*) * (if_body_len + 1));
+        if_body[if_body_len++] = expr;
+    }
+
+    if(previous(par).type == TOK_END) {
+        return expr_create_if(condition, if_body, if_body_len, NULL, 0);
+    }
+
+    if(previous(par).type != TOK_ELSE) {
+        Token prev = previous(par);
+        fprintf(stderr, "%s:%lu:%lu: error: expected end or else, found %s instead\n",
+            prev.source_path, prev.line + 1, prev.column + 1,
+            token_strs[prev.type]
+        );
+        return NULL;
+    }
+
+    Expr** else_body = NULL;
+    size_t else_body_len = 0;
+    while(!match(par, TOK_END)) {
+        Expr* expr = collect_expr(par);
+        if(!expr)
+            return NULL;
+        else_body = realloc(else_body, sizeof(Expr*) * (else_body_len + 1));
+        else_body[else_body_len++] = expr;
+    }
+
+    return expr_create_if(condition, if_body, if_body_len, else_body, else_body_len);
+}
+
+Expr* collect_statement(Parser* par) {
+    if(match(par, TOK_IF)) {
+        return collect_if(par);
+    } else {
+        // TODO: Exprs should not exist on their own
+        return collect_expr(par);
+    }
+}
+
 bool parser_reached_end(const Parser* par) {
     return peek(par).type == TOK_EOF;
 }
 
 Expr* parser_collect_expr(Parser* par) {
-    return collect_term(par);
+    return collect_statement(par);
 }

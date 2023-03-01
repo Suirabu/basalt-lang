@@ -60,6 +60,19 @@ static ValueTag get_binary_value(Expr* expr) {
     }
 }
 
+static ValueTag get_if_value(Expr* expr) {
+    if(get_expr_value(expr->if_stmt.condition) == VAL_ERROR)
+        return VAL_ERROR;
+
+    for(size_t i = 0; i < expr->if_stmt.if_body_len; ++i)
+        if(get_expr_value(expr->if_stmt.if_body[i]) == VAL_ERROR)
+            return VAL_ERROR;
+    for(size_t i = 0; i < expr->if_stmt.else_body_len; ++i)
+        if(get_expr_value(expr->if_stmt.else_body[i]) == VAL_ERROR)
+            return VAL_ERROR;
+    return VAL_NONE;
+}
+
 static ValueTag get_expr_value(Expr* expr) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -70,6 +83,8 @@ static ValueTag get_expr_value(Expr* expr) {
             return get_binary_value(expr);
         case EXPR_GROUPING:
             return get_expr_value(expr->grouping.expr);
+        case EXPR_IF:
+            return get_if_value(expr);
     }
 }
 
