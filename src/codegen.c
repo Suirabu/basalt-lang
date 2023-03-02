@@ -90,8 +90,25 @@ static int write_literal(Expr* expr, FILE* out) {
 }
 
 static int write_unary(Expr* expr, FILE* out) {
-    fprintf(stderr, "error: unary expressions are unimplemented\n");
-    return -1;
+    const int rhs_reg = write_assembly_for_expr(expr->unary.rhs, out);
+    switch(expr->unary.op.type) {
+        case TOK_MINUS:
+            fprintf(out, "    neg %s\n", registers[rhs_reg]);
+            break;
+        case TOK_NOT:
+            fprintf(out,
+                "    not %s\n"
+                "    and %s, 1\n",
+                registers[rhs_reg],
+                registers[rhs_reg]
+            );
+            break;
+
+        default:
+            fprintf(stderr, "error: unknown unary operation '%s'\n", token_strs[expr->binary.op.type]);
+            return -1;
+    }
+    return rhs_reg;
 }
 
 static int write_binary(Expr* expr, FILE* out) {

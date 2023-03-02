@@ -136,6 +136,8 @@ bool collect_keyword(Lexer* lex, Token* result) {
         result->type = TOK_THEN;
     } else if(strcmp(lexemme, "end") == 0) {
         result->type = TOK_END;
+    } else if(strcmp(lexemme, "not") == 0) {
+        result->type = TOK_NOT;
     } else {
         fprintf(stderr, "%s:%lu:%lu: error: unknown keyword '%s'\n", lex->source_path, lex->line + 1, lex->column + 1, lexemme);
         return false;

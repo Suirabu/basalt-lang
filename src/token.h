@@ -49,6 +49,7 @@ typedef enum {
     TOK_ELSE,
     TOK_THEN,
     TOK_END,
+    TOK_NOT,
 
     TOK_ERROR,
     TOK_EOF,

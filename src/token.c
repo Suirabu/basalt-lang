@@ -20,6 +20,7 @@ const char* token_strs[] = {
     "else",
     "then",
     "end",
+    "not",
     "error",
     "eof",
 };

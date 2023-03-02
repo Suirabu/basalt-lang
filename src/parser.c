@@ -66,7 +66,7 @@ Expr* collect_primary(Parser* par) {
 }
 
 Expr* collect_unary(Parser* par) {
-    if(match(par, TOK_MINUS)) {
+    if(match(par, TOK_MINUS) || match(par, TOK_NOT)) {
         Token op = previous(par);
         Expr* rhs = collect_unary(par);
         return expr_create_unary(op, rhs);

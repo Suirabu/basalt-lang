@@ -13,8 +13,28 @@
 static ValueTag get_expr_value(Expr* expr);
 
 static ValueTag get_unary_value(Expr* expr) {
-    fprintf(stderr, "error: typechecking unary values is unimplemented\n");
-    return VAL_ERROR;
+    const Token op = expr->unary.op;
+    const ValueTag rhs = get_expr_value(expr->unary.rhs);
+    if(rhs == VAL_ERROR)
+        return VAL_ERROR;
+
+    switch(op.type) {
+        case TOK_MINUS:
+            if(rhs != VAL_INT) {
+                REPORT_ERROR(op, "cannot perform %s operation on type %s\n", token_strs[op.type], type_strs[rhs]);
+                return VAL_ERROR;
+            }
+            return VAL_INT;
+        case TOK_NOT:
+            if(rhs != VAL_BOOL) {
+                REPORT_ERROR(op, "cannot perform %s operation on type %s\n", token_strs[op.type], type_strs[rhs]);
+                return VAL_ERROR;
+            }
+            return VAL_BOOL;
+
+        default:
+            return VAL_ERROR;
+    }
 }
 
 static ValueTag get_binary_value(Expr* expr) {
