@@ -27,11 +27,14 @@ static int allocate_register(void) {
         fprintf(stderr, "error: failed to allocate register\n");
         return -1;
     }
-
+    
     return free_registers[--n_free_registers];
 }
 
 static void free_register(int reg) {
+    if(reg == -1)
+        return;
+
     free_registers[n_free_registers++] = reg;
 }
 
@@ -287,6 +290,7 @@ static int write_variable_definition(Expr* expr, FILE* out) {
 static int write_assign(Expr* expr, FILE* out) {
     const int val_reg = write_assembly_for_expr(expr->assign.expr, out);
     fprintf(out, "    mov [g_%s], %s\n", expr->assign.identifier, registers[val_reg]);
+    free_register(val_reg);
     return -1;
 }
 
