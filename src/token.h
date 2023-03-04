@@ -45,9 +45,13 @@ typedef enum {
     TOK_GREATER_EQUAL,
 
     TOK_PLUS,
+    TOK_PLUS_EQUAL,
     TOK_MINUS,
+    TOK_MINUS_EQUAL,
     TOK_STAR,
+    TOK_STAR_EQUAL,
     TOK_SLASH,
+    TOK_SLASH_EQUAL,
     TOK_COLON,
 
     TOK_IF,

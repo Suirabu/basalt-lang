@@ -289,7 +289,61 @@ static int write_variable_definition(Expr* expr, FILE* out) {
 
 static int write_assign(Expr* expr, FILE* out) {
     const int val_reg = write_assembly_for_expr(expr->assign.expr, out);
-    fprintf(out, "    mov [g_%s], %s\n", expr->assign.identifier, registers[val_reg]);
+    switch(expr->assign.op.type) {
+        case TOK_EQUAL:
+            fprintf(out, "    mov [g_%s], %s\n", expr->assign.identifier, registers[val_reg]);
+            break;
+        case TOK_PLUS_EQUAL: {
+            const int temp = allocate_register();
+            fprintf(out,
+                "    mov %s, [g_%s]\n"
+                "    add %s, %s\n"
+                "    mov [g_%s], %s\n",
+                registers[temp], expr->assign.identifier,
+                registers[temp], registers[val_reg],
+                expr->assign.identifier, registers[temp]
+            );
+            free_register(temp);
+            break;
+        }
+        case TOK_MINUS_EQUAL: {
+            const int temp = allocate_register();
+            fprintf(out,
+                "    mov %s, [g_%s]\n"
+                "    sub %s, %s\n"
+                "    mov [g_%s], %s\n",
+                registers[temp], expr->assign.identifier,
+                registers[temp], registers[val_reg],
+                expr->assign.identifier, registers[temp]
+            );
+            free_register(temp);
+            break;
+        }
+        case TOK_STAR_EQUAL: {
+            const int temp = allocate_register();
+            fprintf(out,
+                "    mov %s, [g_%s]\n"
+                "    imul %s, %s\n"
+                "    mov [g_%s], %s\n",
+                registers[temp], expr->assign.identifier,
+                registers[temp], registers[val_reg],
+                expr->assign.identifier, registers[temp]
+            );
+            free_register(temp);
+            break;
+        }
+        case TOK_SLASH_EQUAL:
+            fprintf(out,
+                "    mov rax, [g_%s]\n"
+                "    xor rdx, rdx\n"
+                "    idiv %s\n"
+                "    mov [g_%s], rax\n",
+                expr->assign.identifier,
+                registers[val_reg],
+                expr->assign.identifier
+            );
+            break;
+    }
     free_register(val_reg);
     return -1;
 }

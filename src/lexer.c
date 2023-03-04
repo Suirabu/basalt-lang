@@ -206,16 +206,36 @@ bool collect_symbol(Lexer* lex, Token* result) {
             }
             break;
         case '+':
-            result->type = TOK_PLUS;
+            if(peek(lex) == '=') {
+                advance(lex);
+                result->type = TOK_PLUS_EQUAL;
+            } else {
+                result->type = TOK_PLUS;
+            }
             break;
         case '-':
-            result->type = TOK_MINUS;
+            if(peek(lex) == '=') {
+                advance(lex);
+                result->type = TOK_MINUS_EQUAL;
+            } else {
+                result->type = TOK_MINUS;
+            }
             break;
         case '*':
-            result->type = TOK_STAR;
+            if(peek(lex) == '=') {
+                advance(lex);
+                result->type = TOK_STAR_EQUAL;
+            } else {
+                result->type = TOK_STAR;
+            }
             break;
         case '/':
-            result->type = TOK_SLASH;
+            if(peek(lex) == '=') {
+                advance(lex);
+                result->type = TOK_SLASH_EQUAL;
+            } else {
+                result->type = TOK_SLASH;
+            }
             break;
         case ':':
             result->type = TOK_COLON;

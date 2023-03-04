@@ -160,7 +160,7 @@ Expr* collect_equality(Parser* par) {
 Expr* collect_assignment(Parser* par) {
     Expr* expr = collect_equality(par);
 
-    if(match(par, TOK_EQUAL)) {
+    if(match(par, TOK_EQUAL) || match(par, TOK_PLUS_EQUAL) || match(par, TOK_MINUS_EQUAL) || match(par, TOK_STAR_EQUAL) || match(par, TOK_SLASH_EQUAL)) {
         Token op = previous(par);
         Expr* rhs = parser_collect_expr(par);
 
