@@ -184,19 +184,15 @@ Expr* collect_assignment(Parser* par) {
     return expr;
 }
 
-Expr* collect_expr(Parser* par) {
-    return collect_equality(par);
-}
-
 Expr* collect_if(Parser* par) {
-    Expr* condition = collect_expr(par);
+    Expr* condition = parser_collect_expr(par);
     if(!expect(par, TOK_THEN))
         return NULL;
     
     Expr** if_body = NULL;
     size_t if_body_len = 0;
     while(!(match(par, TOK_END) || match(par, TOK_ELSE))) {
-        Expr* expr = collect_expr(par);
+        Expr* expr = parser_collect_expr(par);
         if(!expr)
             return NULL;
         if_body = realloc(if_body, sizeof(Expr*) * (if_body_len + 1));
@@ -219,7 +215,7 @@ Expr* collect_if(Parser* par) {
     Expr** else_body = NULL;
     size_t else_body_len = 0;
     while(!match(par, TOK_END)) {
-        Expr* expr = collect_expr(par);
+        Expr* expr = parser_collect_expr(par);
         if(!expr)
             return NULL;
         else_body = realloc(else_body, sizeof(Expr*) * (else_body_len + 1));
@@ -250,7 +246,7 @@ static Expr* collect_var_definition(Parser* par) {
     Expr* initializer = NULL;
 
     if(match(par, TOK_EQUAL)) {
-        initializer = collect_expr(par);
+        initializer = parser_collect_expr(par);
     }
 
     if(varmap_key_exists(identifier.value.identifier)) {
