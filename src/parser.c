@@ -157,6 +157,33 @@ Expr* collect_equality(Parser* par) {
     return expr;
 }
 
+Expr* collect_assignment(Parser* par) {
+    Expr* expr = collect_equality(par);
+
+    if(match(par, TOK_EQUAL)) {
+        Token op = previous(par);
+        Expr* rhs = parser_collect_expr(par);
+
+        if(expr->tag != EXPR_LITERAL || expr->literal.value.tag != VAL_IDENTIFIER) {
+            fprintf(stderr, "%s:%lu:%lu: error: invalid assignment target\n", op.source_path, op.line + 1, op.column + 1);
+            return NULL;
+        }
+
+        const char* identifier = expr->literal.value.identifier;
+
+        if(!varmap_key_exists(identifier)) {
+            fprintf(stderr, "%s:%lu:%lu: error: cannot assign non-existant variable %s\n",
+                op.source_path, op.line + 1, op.column + 1, identifier
+            );
+            return NULL;
+        }
+
+        return expr_create_assign(identifier, op, rhs);
+    }
+
+    return expr;
+}
+
 Expr* collect_expr(Parser* par) {
     return collect_equality(par);
 }
@@ -244,7 +271,7 @@ Expr* collect_statement(Parser* par) {
         return collect_var_definition(par);
     } else {
         // TODO: Exprs should not exist on their own
-        return collect_expr(par);
+        return collect_assignment(par);
     }
 }
 

@@ -52,16 +52,23 @@ Expr* expr_create_var_def(const char* identifier, ValueTag type, Expr* initial_v
     result->var_def.identifier = identifier;
     result->var_def.type = type;
     result->var_def.initial_value = initial_value;
-    return result;
-    
+    return result;    
+}
+
+Expr* expr_create_assign(const char* identifier, Token op, Expr* expr) {
+    Expr* result = malloc(sizeof(Expr));
+    result->tag = EXPR_ASSIGN;
+    result->assign.identifier = identifier;
+    result->assign.op = op;
+    result->assign.expr = expr;
+    return result;    
 }
 
 void expr_free(Expr* expr) {
     switch(expr->tag) {
         case EXPR_LITERAL:
-            if(expr->literal.value.tag == VAL_STRING) {
+            if(expr->literal.value.tag == VAL_STRING)
                 free((void*)expr->literal.value.val_string);
-            }
             break;
         case EXPR_UNARY:
             expr_free(expr->unary.rhs);
@@ -84,6 +91,10 @@ void expr_free(Expr* expr) {
             if(expr->var_def.initial_value)
                 expr_free(expr->var_def.initial_value);
             free((void*)expr->var_def.identifier);
+            break;
+        case EXPR_ASSIGN:
+            expr_free(expr->assign.expr);
+            free((void*)expr->assign.identifier);
             break;
     }
 

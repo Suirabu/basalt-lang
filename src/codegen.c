@@ -284,6 +284,12 @@ static int write_variable_definition(Expr* expr, FILE* out) {
     return -1;
 }
 
+static int write_assign(Expr* expr, FILE* out) {
+    const int val_reg = write_assembly_for_expr(expr->assign.expr, out);
+    fprintf(out, "    mov [g_%s], %s\n", expr->assign.identifier, registers[val_reg]);
+    return -1;
+}
+
 static int write_assembly_for_expr(Expr* expr, FILE* out) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -298,6 +304,8 @@ static int write_assembly_for_expr(Expr* expr, FILE* out) {
             return write_if(expr, out);
         case EXPR_VAR_DEF:
             return write_variable_definition(expr, out);
+        case EXPR_ASSIGN:
+            return write_assign(expr, out);
     }
 }
 

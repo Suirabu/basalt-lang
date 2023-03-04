@@ -112,6 +112,17 @@ static ValueTag get_var_def_value(Expr* expr) {
     return VAL_NONE;
 }
 
+static ValueTag get_assign_value(Expr* expr) {
+    ValueTag expected_type = varmap_get(expr->assign.identifier);
+    ValueTag expr_type = get_expr_value(expr->assign.expr);
+
+    if(expected_type != expr_type) {
+        REPORT_ERROR(expr->assign.op, "cannot assign value of type %s to variable of type %s\n", type_strs[expr_type], type_strs[expected_type]);
+        return VAL_ERROR;
+    }
+    return VAL_NONE;
+}
+
 static ValueTag get_expr_value(Expr* expr) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -126,6 +137,8 @@ static ValueTag get_expr_value(Expr* expr) {
             return get_if_value(expr);
         case EXPR_VAR_DEF:
             return get_var_def_value(expr);
+        case EXPR_ASSIGN:
+            return get_assign_value(expr);
     }
 }
 

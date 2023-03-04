@@ -1,0 +1,4 @@
+var a: int = 5
+var b: int = a + 10
+
+a = a + b
