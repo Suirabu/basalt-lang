@@ -46,6 +46,16 @@ Expr* expr_create_if(Expr* condition, Expr** if_body, size_t if_body_len, Expr**
     return result;
 }
 
+Expr* expr_create_var_def(const char* identifier, ValueTag type, Expr* initial_value) {
+    Expr* result = malloc(sizeof(Expr));
+    result->tag = EXPR_VAR_DEF;
+    result->var_def.identifier = identifier;
+    result->var_def.type = type;
+    result->var_def.initial_value = initial_value;
+    return result;
+    
+}
+
 void expr_free(Expr* expr) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -69,6 +79,11 @@ void expr_free(Expr* expr) {
                 expr_free(expr->if_stmt.if_body[i]);
             for(size_t i = 0; i < expr->if_stmt.else_body_len; ++i)
                 expr_free(expr->if_stmt.else_body[i]);
+            break;
+        case EXPR_VAR_DEF:
+            if(expr->var_def.initial_value)
+                expr_free(expr->var_def.initial_value);
+            free((void*)expr->var_def.identifier);
             break;
     }
 
@@ -96,6 +111,9 @@ static void value_print_with_indent(Value value, size_t indent) {
             break;
         case VAL_STRING:
             printf("string = %s\n", value.val_string);
+            break;
+        case VAL_IDENTIFIER:
+            printf("identifier = %s\n", value.identifier);
             break;
         case VAL_ERROR:
             fprintf(stderr, "error: cannot print erroneous value\n");

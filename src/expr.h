@@ -9,6 +9,7 @@ typedef enum {
     EXPR_BINARY,
     EXPR_GROUPING,
     EXPR_IF,
+    EXPR_VAR_DEF,
 } ExprTag;
 
 typedef struct _Expr {
@@ -25,6 +26,11 @@ typedef struct _Expr {
             struct _Expr** else_body;
             size_t else_body_len;
         } if_stmt;
+        struct {
+            const char* identifier;
+            ValueTag type;
+            struct _Expr* initial_value;
+        } var_def;
     };
 } Expr;
 
@@ -33,6 +39,7 @@ Expr* expr_create_unary(Token op, Expr* rhs);
 Expr* expr_create_binary(Expr* lhs, Token op, Expr* rhs);
 Expr* expr_create_grouping(Expr* expr);
 Expr* expr_create_if(Expr* condition, Expr** if_body, size_t if_body_len, Expr** else_body, size_t else_body_len);
+Expr* expr_create_var_def(const char* identifier, ValueTag type, Expr* initial_value);
 void expr_free(Expr* expr);
 
 void expr_print(Expr* expr);

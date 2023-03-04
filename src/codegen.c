@@ -6,6 +6,7 @@
 #include "expr.h"
 #include "global.h"
 #include "token.h"
+#include "varmap.h"
 
 static const char* registers[] = {
     "r9", "r10", "r11", "r12", "r13", "r14", "r15",
@@ -49,6 +50,23 @@ static void write_globals(FILE* out) {
         );
     }
 
+    for(size_t i = 0; i < varmap_len; ++i) {
+        MapItem var = varmap[i];
+
+        switch(var.type) {
+            case VAL_INT:
+                fprintf(out, "    g_%s: resd 1\n", var.identifier);
+                break;
+            case VAL_BOOL:
+                fprintf(out, "    g_%s: resb 1\n", var.identifier);
+                break;
+
+            default:
+                fprintf(stderr, "error: cannot generate code for variable of type %s\n", type_strs[var.type]);
+                break;
+        }
+    }
+
     fprintf(out, "\n");
 }
 
@@ -79,6 +97,9 @@ static int write_literal(Expr* expr, FILE* out) {
             break;
         case VAL_STRING:
             fprintf(out, "    mov %s, str_%lu\n", registers[reg], expr->literal.value.global_id);
+            break;
+        case VAL_IDENTIFIER:
+            fprintf(out, "    mov %s, [g_%s]\n", registers[reg], expr->literal.value.identifier);
             break;
         case VAL_NONE:
         case VAL_ERROR:
@@ -252,6 +273,17 @@ static int write_if(Expr* expr, FILE* out) {
     return -1;
 }
 
+static int write_variable_definition(Expr* expr, FILE* out) {
+    if(!expr->var_def.initial_value)
+        return -1;
+
+    const int val_reg = write_assembly_for_expr(expr->var_def.initial_value, out);
+    fprintf(out, "    mov [g_%s], %s\n", expr->var_def.identifier, registers[val_reg]);
+    free_register(val_reg);
+
+    return -1;
+}
+
 static int write_assembly_for_expr(Expr* expr, FILE* out) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -264,6 +296,8 @@ static int write_assembly_for_expr(Expr* expr, FILE* out) {
             return write_grouping(expr, out);
         case EXPR_IF:
             return write_if(expr, out);
+        case EXPR_VAR_DEF:
+            return write_variable_definition(expr, out);
     }
 }
 

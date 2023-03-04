@@ -5,6 +5,7 @@
 #include "expr.h"
 #include "parser.h"
 #include "token.h"
+#include "varmap.h"
 
 static Token peek(const Parser* par) {
     return par->tokens[par->tp];
@@ -44,9 +45,38 @@ static bool expect(Parser* par, TokenType type) {
     return true;
 }
 
+static bool check_type(Parser* par) {
+    const Token t = peek(par);
+
+    if(t.type != TOK_TYPE_INT && t.type != TOK_TYPE_BOOL) {
+        const Token tok = peek(par);
+        fprintf(stderr, "%s:%lu:%lu: error: expected type, found %s instead\n",
+            tok.source_path, tok.line + 1, tok.column + 1,
+            token_strs[tok.type]
+        );
+        return false;
+    }
+
+    return true;
+}
+
 Expr* collect_primary(Parser* par) {
     if(match(par, TOK_INT) || match(par, TOK_BOOL) || match(par, TOK_STRING)) {
         return expr_create_literal(previous(par).value);
+    }
+
+    // Variable
+    if(match(par, TOK_IDENTIFIER)) {
+        const Token iden = previous(par);
+        if(!varmap_key_exists(iden.value.identifier)) {
+            fprintf(stderr, "%s:%lu:%lu: error: use of undefined variable %s\n",
+                iden.source_path, iden.line + 1, iden.column + 1,
+                iden.value.identifier
+            );
+            return NULL;
+        }
+
+        return expr_create_literal(iden.value);
     }
 
     if(match(par, TOK_LEFT_PAREN)) {
@@ -172,9 +202,46 @@ Expr* collect_if(Parser* par) {
     return expr_create_if(condition, if_body, if_body_len, else_body, else_body_len);
 }
 
+static Expr* collect_var_definition(Parser* par) {
+    Token start = previous(par);
+
+    // Get identifier
+    if(!expect(par, TOK_IDENTIFIER))
+        return NULL;
+    Token identifier = previous(par);
+
+    if(!expect(par, TOK_COLON))
+        return NULL;
+    
+    if(!check_type(par))
+        return NULL;
+    
+    Token type = advance(par);
+    ValueTag value_tag = token_type_to_value_tag(type.type);
+
+    // Get optional variable initializer
+    Expr* initializer = NULL;
+
+    if(match(par, TOK_EQUAL)) {
+        initializer = collect_expr(par);
+    }
+
+    if(varmap_key_exists(identifier.value.identifier)) {
+        fprintf(stderr, "%s:%lu:%lu: error: redefinition of variable %s\n",
+            start.source_path, start.line + 1, start.column + 1,
+            identifier.value.identifier
+        );
+        return NULL;
+    }
+    varmap_add(identifier.value.identifier, value_tag);
+    return expr_create_var_def(identifier.value.identifier, value_tag, initializer);
+}
+
 Expr* collect_statement(Parser* par) {
     if(match(par, TOK_IF)) {
         return collect_if(par);
+    } else if(match(par, TOK_VAR)) {
+        return collect_var_definition(par);
     } else {
         // TODO: Exprs should not exist on their own
         return collect_expr(par);

@@ -29,7 +29,7 @@ static void skip_whitespace(Lexer* lex) {
 const char* collect_lexemme(Lexer* lex) {
     const size_t start = lex->sp;
 
-    while(!reached_end(lex) && isalnum(peek(lex)))
+    while(!reached_end(lex) && (isalnum(peek(lex)) || peek(lex) == '_'))
         advance(lex);
 
     const size_t end = lex->sp;
@@ -138,9 +138,16 @@ bool collect_keyword(Lexer* lex, Token* result) {
         result->type = TOK_END;
     } else if(strcmp(lexemme, "not") == 0) {
         result->type = TOK_NOT;
+    } else if(strcmp(lexemme, "var") == 0) {
+        result->type = TOK_VAR;
+    } else if(strcmp(lexemme, "int") == 0) {
+        result->type = TOK_TYPE_INT;
+    } else if(strcmp(lexemme, "bool") == 0) {
+        result->type = TOK_TYPE_BOOL;
     } else {
-        fprintf(stderr, "%s:%lu:%lu: error: unknown keyword '%s'\n", lex->source_path, lex->line + 1, lex->column + 1, lexemme);
-        return false;
+        result->type = TOK_IDENTIFIER;
+        result->value.tag = VAL_IDENTIFIER;
+        result->value.identifier = lexemme;
     }
 
     return true;
@@ -163,12 +170,12 @@ bool collect_symbol(Lexer* lex, Token* result) {
             result->type = TOK_RIGHT_PAREN;
             break;
         case '=':
-            if(peek(lex) != '=') {
-                fprintf(stderr, "%s:%lu:%lu: error: expected '=', found '%c' instead\n", lex->source_path, lex->line + 1, lex->column + 1, c);
-                return false;
+            if(peek(lex) == '=') {
+                advance(lex);
+                result->type = TOK_EQUAL_EQUAL;
+            } else {
+                result->type = TOK_EQUAL;
             }
-            advance(lex);
-            result->type = TOK_EQUAL_EQUAL;
             break;
         case '!':
             if(peek(lex) != '=') {
@@ -205,6 +212,9 @@ bool collect_symbol(Lexer* lex, Token* result) {
             break;
         case '/':
             result->type = TOK_SLASH;
+            break;
+        case ':':
+            result->type = TOK_COLON;
             break;
         case '\0':
             result->type = TOK_EOF;

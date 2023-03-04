@@ -5,12 +5,22 @@
 #include "expr.h"
 #include "token.h"
 #include "typecheck.h"
+#include "varmap.h"
 
 #define REPORT_ERROR(op, ...) \
     fprintf(stderr, "%s:%lu:%lu: error: ", op.source_path, op.line + 1, op.column + 1); \
     fprintf(stderr, __VA_ARGS__)
 
 static ValueTag get_expr_value(Expr* expr);
+
+static ValueTag get_literal_value(Expr* expr) {
+    switch(expr->literal.value.tag) {
+        case TOK_IDENTIFIER:
+            return varmap_get(expr->literal.value.identifier);
+        default:
+            return expr->literal.value.tag;
+    }
+}
 
 static ValueTag get_unary_value(Expr* expr) {
     const Token op = expr->unary.op;
@@ -93,10 +103,19 @@ static ValueTag get_if_value(Expr* expr) {
     return VAL_NONE;
 }
 
+static ValueTag get_var_def_value(Expr* expr) {
+    if(expr->var_def.initial_value) {
+        if(expr->var_def.type != get_expr_value(expr->var_def.initial_value))
+            // TODO: We should really be reporting an error here but we don't know where this expression begins in source
+            return VAL_ERROR;
+    }
+    return VAL_NONE;
+}
+
 static ValueTag get_expr_value(Expr* expr) {
     switch(expr->tag) {
         case EXPR_LITERAL:
-            return expr->literal.value.tag;
+            return get_literal_value(expr);
         case EXPR_UNARY:
             return get_unary_value(expr);
         case EXPR_BINARY:
@@ -105,6 +124,8 @@ static ValueTag get_expr_value(Expr* expr) {
             return get_expr_value(expr->grouping.expr);
         case EXPR_IF:
             return get_if_value(expr);
+        case EXPR_VAR_DEF:
+            return get_var_def_value(expr);
     }
 }
 
