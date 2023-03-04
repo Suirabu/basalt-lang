@@ -14,6 +14,10 @@ static char peek(const Lexer* lex) {
 
 static char advance(Lexer* lex) {
     ++lex->column;
+    if(peek(lex) == '\n') {
+        lex->column = 0;
+        ++lex->line;
+    }
     return lex->source[lex->sp++];
 }
 
