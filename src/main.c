@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "codegen.h"
 #include "expr.h"
@@ -8,6 +9,31 @@
 #include "parser.h"
 #include "token.h"
 #include "typecheck.h"
+
+const char* stem(const char* filepath) {
+    size_t start = strlen(filepath);
+    while(start > 0) {
+        if(filepath[start] == '/') {
+            ++start;
+            break;
+        }
+        --start;
+    }
+
+    size_t end = start;
+    while(filepath[end] != '\0') {
+        if(filepath[end] == '.')
+            break;
+        ++end;
+    }
+
+    const size_t len = end - start;
+    char* result = malloc(len + 1);
+    memcpy(result, filepath + start, len);
+    result[len] = '\0';
+
+    return result;
+}
 
 int main(int argc, char* argv[]) {
     if(argc < 2) {
@@ -78,9 +104,28 @@ int main(int argc, char* argv[]) {
     }
     free(tokens);
 
+    char path_buffer[128];
+    const char* source_path_stem = stem(source_path);
+    snprintf(path_buffer, 127, "%s.asm", source_path_stem);
+
     if(typecheck_exprs(exprs, n_exprs)) {
-        generate_assembly(exprs, n_exprs, "output.asm");
+        generate_assembly(exprs, n_exprs, path_buffer);
     }
+
+    // Use buffer for commands
+    char command_buffer[256];
+
+    snprintf(command_buffer, 255, "yasm -f elf64 %s.asm -o %s.o", source_path_stem, source_path_stem);
+    printf("cmd: %s\n", command_buffer);
+    system(command_buffer);
+    snprintf(command_buffer, 255, "ld %s.o -o %s", source_path_stem, source_path_stem);
+    printf("cmd: %s\n", command_buffer);
+    system(command_buffer);
+
+    snprintf(path_buffer, 127, "%s.o", source_path_stem);
+    remove(path_buffer);
+
+    free((void*)source_path_stem);
 
     for(size_t i = 0; i < n_exprs; ++i) {
         expr_free(exprs[i]);
