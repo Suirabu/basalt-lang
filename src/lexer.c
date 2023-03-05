@@ -30,6 +30,11 @@ static void skip_whitespace(Lexer* lex) {
         advance(lex);
 }
 
+static void skip_line(Lexer* lex) {
+    while(!reached_end(lex) && peek(lex) != '\n')
+        advance(lex);
+}
+
 const char* collect_lexemme(Lexer* lex) {
     const size_t start = lex->sp;
 
@@ -257,6 +262,13 @@ bool collect_symbol(Lexer* lex, Token* result) {
 
 bool lexer_collect_token(Lexer* lex, Token* result) {
     skip_whitespace(lex);
+
+    // Comments
+    if(peek(lex) == '#') {
+        advance(lex); // Skip leading '#'
+        skip_line(lex);
+        return lexer_collect_token(lex, result);
+    }
 
     const char c = peek(lex);
     if(c == '"') {

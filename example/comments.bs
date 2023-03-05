@@ -1,0 +1,6 @@
+# This is a comment
+
+var a: int = 15 # This is another comment
+var b: int # = 10 (shouldn't be assigned to variable `b`)
+
+# Comments!!
