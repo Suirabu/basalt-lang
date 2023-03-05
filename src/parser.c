@@ -260,13 +260,32 @@ static Expr* collect_var_definition(Parser* par) {
     return expr_create_var_def(identifier.value.identifier, value_tag, initializer);
 }
 
+static Expr* collect_while_loop(Parser* par) {
+    Expr* condition = parser_collect_expr(par);
+    if(!expect(par, TOK_DO))
+        return NULL;
+    
+    Expr** body = NULL;
+    size_t body_len = 0;
+    while(!match(par, TOK_END)) {
+        Expr* expr = parser_collect_expr(par);
+        if(!expr)
+            return NULL;
+        body = realloc(body, sizeof(Expr*) * (body_len + 1));
+        body[body_len++] = expr;
+    }
+
+    return expr_create_while(condition, body, body_len);
+}
+
 Expr* collect_statement(Parser* par) {
     if(match(par, TOK_IF)) {
         return collect_if(par);
     } else if(match(par, TOK_VAR)) {
         return collect_var_definition(par);
+    } else if(match(par, TOK_WHILE)) {
+        return collect_while_loop(par);
     } else {
-        // TODO: Exprs should not exist on their own
         return collect_assignment(par);
     }
 }

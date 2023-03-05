@@ -1,0 +1,5 @@
+var a: int = 10
+
+while a > 0 do
+    a -= 1
+end

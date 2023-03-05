@@ -60,6 +60,8 @@ typedef enum {
     TOK_END,
     TOK_NOT,
     TOK_VAR,
+    TOK_WHILE,
+    TOK_DO,
 
     TOK_TYPE_INT,
     TOK_TYPE_BOOL,

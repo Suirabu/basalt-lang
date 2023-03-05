@@ -64,6 +64,15 @@ Expr* expr_create_assign(const char* identifier, Token op, Expr* expr) {
     return result;    
 }
 
+Expr* expr_create_while(Expr* condition, Expr** body, size_t body_len) {
+    Expr* result = malloc(sizeof(Expr));
+    result->tag = EXPR_WHILE;
+    result->while_loop.condition = condition;
+    result->while_loop.body = body;
+    result->while_loop.body_len = body_len;
+    return result;    
+}
+
 void expr_free(Expr* expr) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -95,6 +104,11 @@ void expr_free(Expr* expr) {
         case EXPR_ASSIGN:
             expr_free(expr->assign.expr);
             free((void*)expr->assign.identifier);
+            break;
+        case EXPR_WHILE:
+            expr_free(expr->while_loop.condition);
+            for(size_t i = 0; i < expr->while_loop.body_len; ++i)
+                expr_free(expr->while_loop.body[i]);
             break;
     }
 

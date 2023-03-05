@@ -31,6 +31,8 @@ const char* token_strs[] = {
     "end",
     "not",
     "var",
+    "while",
+    "do",
     "int",
     "bool",
     "error",

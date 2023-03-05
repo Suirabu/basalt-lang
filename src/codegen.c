@@ -348,6 +348,34 @@ static int write_assign(Expr* expr, FILE* out) {
     return -1;
 }
 
+static size_t while_counter = 0;
+
+static int write_while_loop(Expr* expr, FILE* out) {
+    const size_t while_count = while_counter++;
+    fprintf(out, "while_%lu:\n", while_count);
+
+    const int cond_reg = write_assembly_for_expr(expr->while_loop.condition, out);
+    fprintf(out,
+        "    cmp %s, 0\n"
+        "    jz while_%lu_end\n",
+        registers[cond_reg],
+        while_count
+    );
+
+    for(size_t i = 0; i < expr->while_loop.body_len; ++i)
+        free_register(write_assembly_for_expr(expr->while_loop.body[i], out));
+
+    fprintf(out,
+        "    jmp while_%lu\n"
+        "while_%lu_end:\n",
+        while_count,
+        while_count
+    );
+    
+    free_register(cond_reg);
+    return -1;
+}
+
 static int write_assembly_for_expr(Expr* expr, FILE* out) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -364,6 +392,8 @@ static int write_assembly_for_expr(Expr* expr, FILE* out) {
             return write_variable_definition(expr, out);
         case EXPR_ASSIGN:
             return write_assign(expr, out);
+        case EXPR_WHILE:
+            return write_while_loop(expr, out);
     }
 }
 

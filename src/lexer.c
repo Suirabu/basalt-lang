@@ -144,6 +144,10 @@ bool collect_keyword(Lexer* lex, Token* result) {
         result->type = TOK_NOT;
     } else if(strcmp(lexemme, "var") == 0) {
         result->type = TOK_VAR;
+    } else if(strcmp(lexemme, "while") == 0) {
+        result->type = TOK_WHILE;
+    } else if(strcmp(lexemme, "do") == 0) {
+        result->type = TOK_DO;
     } else if(strcmp(lexemme, "int") == 0) {
         result->type = TOK_TYPE_INT;
     } else if(strcmp(lexemme, "bool") == 0) {

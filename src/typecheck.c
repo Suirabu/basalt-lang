@@ -123,6 +123,20 @@ static ValueTag get_assign_value(Expr* expr) {
     return VAL_NONE;
 }
 
+static ValueTag get_while_value(Expr* expr) {
+    ValueTag cond_type = get_expr_value(expr->while_loop.condition);
+    if(cond_type != VAL_BOOL) {
+        fprintf(stderr, "error: expected bool, found %s instead\n", type_strs[cond_type]);
+        return VAL_ERROR;
+    }
+
+    for(size_t i = 0; i < expr->while_loop.body_len; ++i)
+        if(get_expr_value(expr->while_loop.body[i]) == VAL_ERROR)
+            return VAL_ERROR;
+
+    return VAL_NONE;
+}
+
 static ValueTag get_expr_value(Expr* expr) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -139,6 +153,8 @@ static ValueTag get_expr_value(Expr* expr) {
             return get_var_def_value(expr);
         case EXPR_ASSIGN:
             return get_assign_value(expr);
+        case EXPR_WHILE:
+            return get_while_value(expr);
     }
 }
 
