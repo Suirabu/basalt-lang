@@ -8,6 +8,10 @@
 #include "token.h"
 #include "varmap.h"
 
+// TODO: Use appropriately sized registers for values of different types.
+// Currently we are storing all our values in 64-bit registers which is an issues since YASM infers
+// the size of memory based on the register which is being read from/written to. This means that
+// until we implement the ability to use non-64-bit registers all variables must be 64-bits in size.
 static const char* registers[] = {
     "r9", "r10", "r11", "r12", "r13", "r14", "r15",
 };
@@ -58,10 +62,10 @@ static void write_globals(FILE* out) {
 
         switch(var.type) {
             case VAL_INT:
-                fprintf(out, "    g_%s: resd 1\n", var.identifier);
+                fprintf(out, "    g_%s: resq 1\n", var.identifier);
                 break;
             case VAL_BOOL:
-                fprintf(out, "    g_%s: resb 1\n", var.identifier);
+                fprintf(out, "    g_%s: resq 1\n", var.identifier);
                 break;
 
             default:
