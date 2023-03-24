@@ -108,9 +108,16 @@ int main(int argc, char* argv[]) {
     const char* source_path_stem = stem(source_path);
     snprintf(path_buffer, 127, "%s.asm", source_path_stem);
 
-    if(typecheck_exprs(exprs, n_exprs)) {
-        generate_assembly(exprs, n_exprs, path_buffer);
+    if(!typecheck_exprs(exprs, n_exprs)) {
+        for(size_t i = 0; i < n_exprs; ++i)
+            expr_free(exprs[i]);
+
+        free(exprs);
+        global_free_all();
+        return 1;
     }
+    
+    generate_assembly(exprs, n_exprs, path_buffer);
 
     // Use buffer for commands
     char command_buffer[256];
