@@ -115,18 +115,24 @@ void expr_free(Expr* expr) {
     free(expr);
 }
 
+#define print_with_indent(...) \
+    do { \
+        for(size_t i = 0; i < indent; ++i) printf("\033[2m.\033[0m"); \
+        printf(__VA_ARGS__); \
+    } while(0)
+
+static void token_print(Token tok) {
+    printf("%s\n", token_strs[tok.type]);
+}
+
 static void token_print_with_indent(Token tok, size_t indent) {
     for(size_t i = 0; i < indent; ++i) {
         printf("\033[2m.\033[0m");
     }
-    printf("%s\n", token_strs[tok.type]);
+    token_print(tok);
 }
 
-static void value_print_with_indent(Value value, size_t indent) {
-    for(size_t i = 0; i < indent; ++i) {
-        printf("\033[2m.\033[0m");
-    }
-
+static void value_print(Value value) {
     switch(value.tag) {
         case VAL_INT:
             printf("int = %i\n", value.val_int);
@@ -140,10 +146,20 @@ static void value_print_with_indent(Value value, size_t indent) {
         case VAL_IDENTIFIER:
             printf("identifier = %s\n", value.identifier);
             break;
+        case VAL_NONE:
+            printf("none\n");
+            break;
         case VAL_ERROR:
             fprintf(stderr, "error: cannot print erroneous value\n");
             break;
     }
+}
+
+static void value_print_with_indent(Value value, size_t indent) {
+    for(size_t i = 0; i < indent; ++i) {
+        printf("\033[2m.\033[0m");
+    }
+    value_print(value);
 }
 
 static void expr_print_with_indent(Expr* expr, size_t indent) {
@@ -162,6 +178,35 @@ static void expr_print_with_indent(Expr* expr, size_t indent) {
             break;
         case EXPR_GROUPING:
             expr_print_with_indent(expr->grouping.expr, indent + 1);
+            break;
+        case EXPR_IF:
+            print_with_indent("if\n");
+            expr_print_with_indent(expr->if_stmt.condition, indent + 1);
+            print_with_indent("then\n");
+            for(size_t i = 0; i < expr->if_stmt.if_body_len; ++i)
+                expr_print_with_indent(expr->if_stmt.if_body[i], indent + 1);
+            if(expr->if_stmt.else_body) {
+                print_with_indent("else\n");
+                for(size_t i = 0; i < expr->if_stmt.else_body_len; ++i)
+                    expr_print_with_indent(expr->if_stmt.else_body[i], indent + 1);
+            }
+            print_with_indent("end\n");
+            break;
+        case EXPR_VAR_DEF:
+            print_with_indent("var %s: %s =\n", expr->var_def.identifier, type_strs[expr->var_def.type]);
+            expr_print_with_indent(expr->var_def.initial_value, indent + 1);
+            break;
+        case EXPR_ASSIGN:
+            print_with_indent("%s %s\n", expr->assign.identifier, token_strs[expr->assign.op.type]);
+            expr_print_with_indent(expr->assign.expr, indent + 1);
+            break;
+        case EXPR_WHILE:
+            print_with_indent("while\n");
+            expr_print_with_indent(expr->while_loop.condition, indent + 1);
+            print_with_indent("do\n");
+            for(size_t i = 0; i < expr->while_loop.body_len; ++i)
+                expr_print_with_indent(expr->while_loop.body[i], indent + 1);
+            print_with_indent("end\n");
             break;
     }
 }
