@@ -393,13 +393,6 @@ static int write_fn_def(Expr* expr, FILE* out) {
     for(size_t i = 0; i < expr->fn_def.body_len; ++i) {
         free_register(write_assembly_for_expr(expr->fn_def.body[i], out));
     }
-
-    // Return 0 by default
-    fprintf(out,
-        "    mov rax, 0\n"
-        "    ret\n"
-    );
-
     return -1;
 }
 

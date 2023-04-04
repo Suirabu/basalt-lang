@@ -8,6 +8,7 @@
 #include "global.h"
 #include "lexer.h"
 #include "parser.h"
+#include "sema.h"
 #include "symbol.h"
 #include "token.h"
 #include "typecheck.h"
@@ -127,6 +128,9 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
+    if(!sema_analyze(exprs, n_exprs))
+        return 1;
+
     char path_buffer[128];
     const char* source_path_stem = stem(source_path);
     snprintf(path_buffer, 127, "%s.asm", source_path_stem);
