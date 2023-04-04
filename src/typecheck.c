@@ -3,9 +3,9 @@
 #include <stdio.h>
 
 #include "expr.h"
+#include "symbol.h"
 #include "token.h"
 #include "typecheck.h"
-#include "varmap.h"
 
 #define REPORT_ERROR(op, ...) \
     fprintf(stderr, "%s:%lu:%lu: error: ", op.source_path, op.line + 1, op.column + 1); \
@@ -17,7 +17,7 @@ static ValueTag get_expr_value(Expr* expr);
 static ValueTag get_literal_value(Expr* expr) {
     switch(expr->literal.value.tag) {
         case TOK_IDENTIFIER:
-            return varmap_get(expr->literal.value.identifier)->type;
+            return symbol_get(expr->literal.value.identifier)->type;
         default:
             return expr->literal.value.tag;
     }
@@ -114,7 +114,7 @@ static ValueTag get_var_def_value(Expr* expr) {
 }
 
 static ValueTag get_assign_value(Expr* expr) {
-    ValueTag expected_type = varmap_get(expr->assign.identifier)->type;
+    ValueTag expected_type = symbol_get(expr->assign.identifier)->type;
     ValueTag expr_type = get_expr_value(expr->assign.expr);
 
     if(expected_type != expr_type) {

@@ -6,8 +6,8 @@
 #include "codegen.h"
 #include "expr.h"
 #include "global.h"
+#include "symbol.h"
 #include "token.h"
-#include "varmap.h"
 
 // TODO: Use appropriately sized registers for values of different types.
 // Currently we are storing all our values in 64-bit registers which is an issues since YASM infers
@@ -64,10 +64,10 @@ static void write_globals(FILE* out) {
         );
     }
 
-    for(size_t i = 0; i < varmap_len; ++i) {
-        MapItem item = varmap[i];
+    for(size_t i = 0; i < symbol_table_len; ++i) {
+        const Symbol item = symbol_table[i];
 
-        if(item.tag == MAP_VAR) {
+        if(item.stype == SYM_VAR) {
             switch(item.type) {
                 case VAL_INT:
                     fprintf(out, "    g_%s: resq 1\n", item.identifier);

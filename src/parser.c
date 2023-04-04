@@ -4,8 +4,8 @@
 
 #include "expr.h"
 #include "parser.h"
+#include "symbol.h"
 #include "token.h"
-#include "varmap.h"
 
 // TODO: Error recovery
 
@@ -74,7 +74,7 @@ Expr* collect_primary(Parser* par) {
     // Variable
     if(match(par, TOK_IDENTIFIER)) {
         const Token iden = previous(par);
-        if(!varmap_key_exists(iden.value.identifier)) {
+        if(!symbol_exists(iden.value.identifier)) {
             fprintf(stderr, "%s:%lu:%lu: error: use of undefined variable %s\n",
                 iden.source_path, iden.line + 1, iden.column + 1,
                 iden.value.identifier
@@ -177,7 +177,7 @@ Expr* collect_assignment(Parser* par) {
 
         const char* identifier = expr->literal.value.identifier;
 
-        if(!varmap_key_exists(identifier)) {
+        if(!symbol_exists(identifier)) {
             fprintf(stderr, "%s:%lu:%lu: error: cannot assign non-existant variable %s\n",
                 op.source_path, op.line + 1, op.column + 1, identifier
             );
@@ -255,14 +255,14 @@ static Expr* collect_var_definition(Parser* par) {
         initializer = parser_collect_expr(par);
     }
 
-    if(varmap_key_exists(identifier.value.identifier)) {
+    if(symbol_exists(identifier.value.identifier)) {
         fprintf(stderr, "%s:%lu:%lu: error: redefinition of variable %s\n",
             start.source_path, start.line + 1, start.column + 1,
             identifier.value.identifier
         );
         return NULL;
     }
-    varmap_add_var(identifier.value.identifier, value_tag);
+    symbol_add_var(identifier.value.identifier, value_tag);
     return expr_create_var_def(identifier.value.identifier, value_tag, initializer);
 }
 
@@ -288,7 +288,7 @@ static Expr* collect_fn_def(Parser* par) {
     expect(par, TOK_IDENTIFIER);
     const Token identifier = previous(par);
 
-    if(varmap_key_exists(identifier.value.identifier)) {
+    if(symbol_exists(identifier.value.identifier)) {
         fprintf(stderr, "%s:%lu:%lu: error: redefinition of symbol %s\n",
             identifier.source_path, identifier.line + 1, identifier.column + 1,
             identifier.value.identifier
@@ -349,7 +349,7 @@ static Expr* collect_fn_def(Parser* par) {
         body[body_len++] = expr;
     }
 
-    varmap_add_fn(identifier.value.identifier, param_types, n_params, return_type);
+    symbol_add_fn(identifier.value.identifier, param_types, n_params, return_type);
     return expr_create_fn_def(identifier.value.identifier, (const char**)param_identifiers, param_types, n_params, return_type, body, body_len);
 }
 

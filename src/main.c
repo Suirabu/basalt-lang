@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,9 +8,9 @@
 #include "global.h"
 #include "lexer.h"
 #include "parser.h"
+#include "symbol.h"
 #include "token.h"
 #include "typecheck.h"
-#include "varmap.h"
 
 const char* stem(const char* filepath) {
     size_t start = strlen(filepath);
@@ -55,7 +56,7 @@ int main(int argc, char* argv[]) {
     rewind(source_file);
 
     char* source = malloc(source_len + 1);
-    fread(source, source_len, 1, source_file);
+    assert(fread(source, source_len, 1, source_file) == 1);
     source[source_len] = '\0';
     fclose(source_file);
 
@@ -106,12 +107,12 @@ int main(int argc, char* argv[]) {
     free(tokens);
 
     // Ensure `main` function exists and has the correct signature
-    if(!varmap_key_exists("main")) {
+    if(!symbol_exists("main")) {
         fprintf(stderr, "error: function `main` not defined\n");
         return 1;
     } else {
-        const MapItem* main_item = varmap_get("main");
-        if(main_item->tag != MAP_FN || main_item->fn_signature.n_params != 0 || main_item->fn_signature.return_type != VAL_INT) {
+        const Symbol* main_item = symbol_get("main");
+        if(main_item->stype != SYM_FN || main_item->n_params != 0 || main_item->return_type != VAL_INT) {
             fprintf(stderr, "error: symbol `main` must be a function with no parameters and a return type of int\n");
             return 1;
         }
@@ -137,10 +138,10 @@ int main(int argc, char* argv[]) {
 
     snprintf(command_buffer, 255, "yasm -f elf64 %s.asm -o %s.o", source_path_stem, source_path_stem);
     printf("cmd: %s\n", command_buffer);
-    system(command_buffer);
+    assert(system(command_buffer) == 0);
     snprintf(command_buffer, 255, "ld %s.o -o %s", source_path_stem, source_path_stem);
     printf("cmd: %s\n", command_buffer);
-    system(command_buffer);
+    assert(system(command_buffer) == 0);
 
     snprintf(path_buffer, 127, "%s.o", source_path_stem);
     remove(path_buffer);
