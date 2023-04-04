@@ -9,6 +9,7 @@
 #include "parser.h"
 #include "token.h"
 #include "typecheck.h"
+#include "varmap.h"
 
 const char* stem(const char* filepath) {
     size_t start = strlen(filepath);
@@ -104,9 +105,17 @@ int main(int argc, char* argv[]) {
     }
     free(tokens);
 
-    char path_buffer[128];
-    const char* source_path_stem = stem(source_path);
-    snprintf(path_buffer, 127, "%s.asm", source_path_stem);
+    // Ensure `main` function exists and has the correct signature
+    if(!varmap_key_exists("main")) {
+        fprintf(stderr, "error: function `main` not defined\n");
+        return 1;
+    } else {
+        const MapItem* main_item = varmap_get("main");
+        if(main_item->tag != MAP_FN || main_item->fn_signature.n_params != 0 || main_item->fn_signature.return_type != VAL_INT) {
+            fprintf(stderr, "error: symbol `main` must be a function with no parameters and a return type of int\n");
+            return 1;
+        }
+    }
 
     if(!typecheck_exprs(exprs, n_exprs)) {
         for(size_t i = 0; i < n_exprs; ++i)
@@ -117,6 +126,10 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     
+    char path_buffer[128];
+    const char* source_path_stem = stem(source_path);
+    snprintf(path_buffer, 127, "%s.asm", source_path_stem);
+
     generate_assembly(exprs, n_exprs, path_buffer);
 
     // Use buffer for commands

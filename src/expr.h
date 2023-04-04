@@ -12,6 +12,8 @@ typedef enum {
     EXPR_VAR_DEF,
     EXPR_ASSIGN,
     EXPR_WHILE,
+    EXPR_FN_DEF,
+    EXPR_RETURN,
 } ExprTag;
 
 typedef struct _Expr {
@@ -43,6 +45,19 @@ typedef struct _Expr {
             struct _Expr** body;
             size_t body_len;
         } while_loop;
+        struct {
+            const char* identifier;
+            const char** param_identifiers;
+            ValueTag* param_types;
+            size_t n_params;
+            ValueTag return_type;
+            struct _Expr** body;
+            size_t body_len;
+        } fn_def;
+        struct {
+            Token op;
+            struct _Expr* value_expr;
+        } op_return;
     };
 } Expr;
 
@@ -54,6 +69,8 @@ Expr* expr_create_if(Expr* condition, Expr** if_body, size_t if_body_len, Expr**
 Expr* expr_create_var_def(const char* identifier, ValueTag type, Expr* initial_value);
 Expr* expr_create_assign(const char* identifier, Token op, Expr* expr);
 Expr* expr_create_while(Expr* condition, Expr** body, size_t body_len);
+Expr* expr_create_fn_def(const char* identifier, const char** param_identifiers, ValueTag* param_types, size_t n_params, ValueTag return_type, struct _Expr** body, size_t body_len);
+Expr* expr_create_return(Token op, Expr* value_expr);
 void expr_free(Expr* expr);
 
 void expr_print(Expr* expr);

@@ -53,6 +53,7 @@ typedef enum {
     TOK_SLASH,
     TOK_SLASH_EQUAL,
     TOK_COLON,
+    TOK_COMMA,
 
     TOK_IF,
     TOK_ELSE,
@@ -62,6 +63,8 @@ typedef enum {
     TOK_VAR,
     TOK_WHILE,
     TOK_DO,
+    TOK_FN,
+    TOK_RETURN,
 
     TOK_TYPE_INT,
     TOK_TYPE_BOOL,

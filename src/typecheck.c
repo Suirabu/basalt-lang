@@ -11,12 +11,13 @@
     fprintf(stderr, "%s:%lu:%lu: error: ", op.source_path, op.line + 1, op.column + 1); \
     fprintf(stderr, __VA_ARGS__)
 
+// TODO: Make exprs const
 static ValueTag get_expr_value(Expr* expr);
 
 static ValueTag get_literal_value(Expr* expr) {
     switch(expr->literal.value.tag) {
         case TOK_IDENTIFIER:
-            return varmap_get(expr->literal.value.identifier);
+            return varmap_get(expr->literal.value.identifier)->type;
         default:
             return expr->literal.value.tag;
     }
@@ -113,7 +114,7 @@ static ValueTag get_var_def_value(Expr* expr) {
 }
 
 static ValueTag get_assign_value(Expr* expr) {
-    ValueTag expected_type = varmap_get(expr->assign.identifier);
+    ValueTag expected_type = varmap_get(expr->assign.identifier)->type;
     ValueTag expr_type = get_expr_value(expr->assign.expr);
 
     if(expected_type != expr_type) {
@@ -137,6 +138,26 @@ static ValueTag get_while_value(Expr* expr) {
     return VAL_NONE;
 }
 
+static ValueTag get_fn_def_value(Expr* expr) {
+    for(size_t i = 0; i < expr->fn_def.body_len; ++i) {
+        const Expr* curr_expr = expr->fn_def.body[i];
+        if(curr_expr->tag == EXPR_RETURN) {
+            if(get_expr_value(curr_expr->op_return.value_expr) != expr->fn_def.return_type) {
+                REPORT_ERROR(curr_expr->op_return.op, "expected %s, found %s instead\n",
+                    type_strs[expr->fn_def.return_type],
+                    type_strs[get_expr_value(curr_expr->op_return.value_expr)]
+                );
+                return VAL_ERROR;
+            }
+        } else {
+            if(get_expr_value((Expr*)curr_expr) == VAL_ERROR)
+                return VAL_ERROR;
+        }
+    }
+
+    return VAL_NONE;
+}
+
 static ValueTag get_expr_value(Expr* expr) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -155,6 +176,11 @@ static ValueTag get_expr_value(Expr* expr) {
             return get_assign_value(expr);
         case EXPR_WHILE:
             return get_while_value(expr);
+        case EXPR_FN_DEF:
+            return get_fn_def_value(expr);
+        case EXPR_RETURN:
+            REPORT_ERROR(expr->op_return.op, "cannot typecheck return statement outside of function definition\n");
+            return VAL_ERROR;
     }
 }
 

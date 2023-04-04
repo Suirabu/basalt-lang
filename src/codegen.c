@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <string.h>
 
 #include "codegen.h"
 #include "expr.h"
@@ -42,6 +43,12 @@ static void free_register(int reg) {
     free_registers[n_free_registers++] = reg;
 }
 
+// TODO: It might make more sense for the caller of write functions to specify
+// a return register rather than returning them as we do currently. This would
+// both allow us to easily specify a return register for exprs with multiple
+// returns and prevent us from having to return -1 from codegen functions for 
+// exprs with no return values.
+
 static int write_assembly_for_expr(Expr* expr, FILE* out);
 
 static void write_globals(FILE* out) {
@@ -58,20 +65,23 @@ static void write_globals(FILE* out) {
     }
 
     for(size_t i = 0; i < varmap_len; ++i) {
-        MapItem var = varmap[i];
+        MapItem item = varmap[i];
 
-        switch(var.type) {
-            case VAL_INT:
-                fprintf(out, "    g_%s: resq 1\n", var.identifier);
-                break;
-            case VAL_BOOL:
-                fprintf(out, "    g_%s: resq 1\n", var.identifier);
-                break;
+        if(item.tag == MAP_VAR) {
+            switch(item.type) {
+                case VAL_INT:
+                    fprintf(out, "    g_%s: resq 1\n", item.identifier);
+                    break;
+                case VAL_BOOL:
+                    fprintf(out, "    g_%s: resq 1\n", item.identifier);
+                    break;
 
-            default:
-                fprintf(stderr, "error: cannot generate code for variable of type %s\n", type_strs[var.type]);
-                break;
+                default:
+                    fprintf(stderr, "error: cannot generate code for variable of type %s\n", type_strs[item.type]);
+                    break;
+            }
         }
+
     }
 
     fprintf(out, "\n");
@@ -82,13 +92,10 @@ static void write_preamble(FILE* out) {
         "section .text\n"
         "global _start\n\n"
         "_start:\n"
-    );
-}
-
-static void write_exit(FILE* out) {
-    fprintf(out,
+        "    call fn_main\n"
+        // Exit syscall
+        "    mov rdi, rax\n"
         "    mov rax, 60\n"
-        "    mov rdi, 0\n"
         "    syscall\n"
     );
 }
@@ -380,6 +387,31 @@ static int write_while_loop(Expr* expr, FILE* out) {
     return -1;
 }
 
+// TODO: Parameters
+static int write_fn_def(Expr* expr, FILE* out) {
+    fprintf(out, "\nfn_%s:\n", expr->fn_def.identifier);
+    for(size_t i = 0; i < expr->fn_def.body_len; ++i) {
+        free_register(write_assembly_for_expr(expr->fn_def.body[i], out));
+    }
+
+    // Return 0 by default
+    fprintf(out,
+        "    mov rax, 0\n"
+        "    ret\n"
+    );
+
+    return -1;
+}
+
+static int write_return(Expr* expr, FILE* out) {
+    fprintf(out,
+        "    mov rax, %s\n"
+        "    ret\n",
+        registers[write_assembly_for_expr(expr->op_return.value_expr, out)]
+    );
+    return -1;
+}
+
 static int write_assembly_for_expr(Expr* expr, FILE* out) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -398,6 +430,10 @@ static int write_assembly_for_expr(Expr* expr, FILE* out) {
             return write_assign(expr, out);
         case EXPR_WHILE:
             return write_while_loop(expr, out);
+        case EXPR_FN_DEF:
+            return write_fn_def(expr, out);
+        case EXPR_RETURN:
+            return write_return(expr, out);
     }
 }
 
@@ -418,8 +454,6 @@ bool generate_assembly(Expr** exprs, size_t n_exprs, const char* output_path) {
         if(reg != -1)
             free_register(reg); // We won't be needing this register for now
     }
-
-    write_exit(output_file);
 
     fclose(output_file);
     return true;

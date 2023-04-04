@@ -7,6 +7,8 @@
 #include "token.h"
 #include "varmap.h"
 
+// TODO: Error recovery
+
 static Token peek(const Parser* par) {
     return par->tokens[par->tp];
 }
@@ -45,6 +47,10 @@ static bool expect(Parser* par, TokenType type) {
     return true;
 }
 
+// TODO: Replace with `expect_type` function
+// This function would act exactly the same except it would consume the token
+// in the process of checking its contents. The token could then be retrieved
+// by the callee using the `previous` function.
 static bool check_type(Parser* par) {
     const Token t = peek(par);
 
@@ -256,7 +262,7 @@ static Expr* collect_var_definition(Parser* par) {
         );
         return NULL;
     }
-    varmap_add(identifier.value.identifier, value_tag);
+    varmap_add_var(identifier.value.identifier, value_tag);
     return expr_create_var_def(identifier.value.identifier, value_tag, initializer);
 }
 
@@ -278,6 +284,81 @@ static Expr* collect_while_loop(Parser* par) {
     return expr_create_while(condition, body, body_len);
 }
 
+static Expr* collect_fn_def(Parser* par) {
+    expect(par, TOK_IDENTIFIER);
+    const Token identifier = previous(par);
+
+    if(varmap_key_exists(identifier.value.identifier)) {
+        fprintf(stderr, "%s:%lu:%lu: error: redefinition of symbol %s\n",
+            identifier.source_path, identifier.line + 1, identifier.column + 1,
+            identifier.value.identifier
+        );
+        return NULL;
+    }
+    
+    expect(par, TOK_LEFT_PAREN);
+
+    size_t n_params = 0;
+    char** param_identifiers = NULL;
+    ValueTag* param_types = NULL;
+
+    while(peek(par).type != TOK_RIGHT_PAREN) {
+        expect(par, TOK_IDENTIFIER);
+        const Token param_identifier = previous(par);
+
+        expect(par, TOK_COLON);
+
+        check_type(par);
+        const ValueTag param_type = token_type_to_value_tag(advance(par).type);
+
+        ++n_params;
+        param_identifiers = (char**)realloc(param_identifiers, sizeof(char*) * n_params);
+        param_identifiers[n_params - 1] = (char*)param_identifier.value.identifier;
+        param_types = (ValueTag*)realloc(param_types, sizeof(ValueTag) * n_params);
+        param_types[n_params - 1] = param_type;
+
+        const Token tok = peek(par);
+
+        if(tok.type == TOK_RIGHT_PAREN)
+            break;
+
+        if(tok.type != TOK_COMMA) {
+            fprintf(stderr, "%s:%lu:%lu: error: expected comma or right paren, found %s instead\n",
+                tok.source_path, tok.line + 1, tok.column + 1, token_strs[tok.type]
+            );
+            free(param_identifiers);
+            free(param_types);
+            return NULL;
+        }
+
+        advance(par);
+    }
+
+    advance(par);
+
+    check_type(par);
+    const ValueTag return_type = token_type_to_value_tag(advance(par).type);
+
+    Expr** body = NULL;
+    size_t body_len = 0;
+    while(!match(par, TOK_END)) {
+        Expr* expr = parser_collect_expr(par);
+        if(!expr)
+            return NULL;
+        body = realloc(body, sizeof(Expr*) * (body_len + 1));
+        body[body_len++] = expr;
+    }
+
+    varmap_add_fn(identifier.value.identifier, param_types, n_params, return_type);
+    return expr_create_fn_def(identifier.value.identifier, (const char**)param_identifiers, param_types, n_params, return_type, body, body_len);
+}
+
+Expr* collect_return(Parser* par) {
+    const Token op = previous(par);
+    const Expr* value_expr = parser_collect_expr(par);
+    return expr_create_return(op, (Expr*)value_expr);
+}
+
 Expr* collect_statement(Parser* par) {
     if(match(par, TOK_IF)) {
         return collect_if(par);
@@ -285,6 +366,10 @@ Expr* collect_statement(Parser* par) {
         return collect_var_definition(par);
     } else if(match(par, TOK_WHILE)) {
         return collect_while_loop(par);
+    } else if(match(par, TOK_FN)) {
+        return collect_fn_def(par);
+    } else if(match(par, TOK_RETURN)) {
+        return collect_return(par);
     } else {
         return collect_assignment(par);
     }

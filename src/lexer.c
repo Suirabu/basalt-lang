@@ -153,6 +153,10 @@ bool collect_keyword(Lexer* lex, Token* result) {
         result->type = TOK_WHILE;
     } else if(strcmp(lexemme, "do") == 0) {
         result->type = TOK_DO;
+    } else if(strcmp(lexemme, "fn") == 0) {
+        result->type = TOK_FN;
+    } else if(strcmp(lexemme, "return") == 0) {
+        result->type = TOK_RETURN;
     } else if(strcmp(lexemme, "int") == 0) {
         result->type = TOK_TYPE_INT;
     } else if(strcmp(lexemme, "bool") == 0) {
@@ -248,6 +252,9 @@ bool collect_symbol(Lexer* lex, Token* result) {
             break;
         case ':':
             result->type = TOK_COLON;
+            break;
+        case ',':
+            result->type = TOK_COMMA;
             break;
         case '\0':
             result->type = TOK_EOF;

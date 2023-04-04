@@ -73,6 +73,27 @@ Expr* expr_create_while(Expr* condition, Expr** body, size_t body_len) {
     return result;    
 }
 
+Expr* expr_create_fn_def(const char* identifier, const char** param_identifiers, ValueTag* param_types, size_t n_params, ValueTag return_type, struct _Expr** body, size_t body_len) {
+    Expr* result = malloc(sizeof(Expr));
+    result->tag = EXPR_FN_DEF;
+    result->fn_def.identifier = identifier;
+    result->fn_def.param_identifiers = param_identifiers;
+    result->fn_def.param_types = param_types;
+    result->fn_def.n_params = n_params;
+    result->fn_def.return_type = return_type;
+    result->fn_def.body = body;
+    result->fn_def.body_len = body_len;
+    return result;    
+}
+
+Expr* expr_create_return(Token op, Expr* value_expr) {
+    Expr* result = malloc(sizeof(Expr));
+    result->tag = EXPR_RETURN;
+    result->op_return.op = op;
+    result->op_return.value_expr = value_expr;
+    return result;
+}
+
 void expr_free(Expr* expr) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -109,6 +130,16 @@ void expr_free(Expr* expr) {
             expr_free(expr->while_loop.condition);
             for(size_t i = 0; i < expr->while_loop.body_len; ++i)
                 expr_free(expr->while_loop.body[i]);
+            break;
+        case EXPR_FN_DEF:
+            for(size_t i = 0; i < expr->fn_def.body_len; ++i)
+                expr_free(expr->fn_def.body[i]);
+            for(size_t i = 0; i < expr->fn_def.n_params; ++i)
+                free((void*)expr->fn_def.param_identifiers[i]);
+            free((void*)expr->fn_def.identifier);
+            free((void*)expr->fn_def.param_types);
+            break;
+        case EXPR_RETURN:
             break;
     }
 
@@ -207,6 +238,25 @@ static void expr_print_with_indent(Expr* expr, size_t indent) {
             for(size_t i = 0; i < expr->while_loop.body_len; ++i)
                 expr_print_with_indent(expr->while_loop.body[i], indent + 1);
             print_with_indent("end\n");
+            break;
+        case EXPR_FN_DEF:
+            print_with_indent("fn %s (", expr->fn_def.identifier);
+            for(size_t i = 0; i < expr->fn_def.n_params; ++i) {
+                printf(
+                    "%s: %s%s",
+                    expr->fn_def.param_identifiers[i],
+                    type_strs[expr->fn_def.param_types[i]],
+                    i == expr->fn_def.n_params - 1 ? "" : ", "
+                );
+            }
+            printf(") %s\n", type_strs[expr->fn_def.return_type]);
+            for(size_t i = 0; i < expr->fn_def.body_len; ++i)
+                expr_print_with_indent(expr->fn_def.body[i], indent + 1);
+            print_with_indent("end\n");
+            break;
+        case EXPR_RETURN:
+            print_with_indent("return\n");
+            expr_print_with_indent(expr->op_return.value_expr, indent + 1);
             break;
     }
 }
