@@ -42,15 +42,6 @@ const char* token_strs[] = {
     "eof",
 };
 
-const char* type_strs[] = {
-    "int",
-    "bool",
-    "string",
-    "identifier",
-    "none",
-    "error",
-};
-
 ValueTag token_type_to_value_tag(TokenType type) {
     switch(type) {
         case TOK_TYPE_INT:

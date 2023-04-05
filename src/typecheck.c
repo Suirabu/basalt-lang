@@ -6,12 +6,12 @@
 #include "symbol.h"
 #include "token.h"
 #include "typecheck.h"
+#include "value.h"
 
 #define REPORT_ERROR(op, ...) \
     fprintf(stderr, "%s:%lu:%lu: error: ", op.source_path, op.line + 1, op.column + 1); \
     fprintf(stderr, __VA_ARGS__)
 
-// TODO: Make exprs const
 static ValueTag get_expr_value(Expr* expr);
 
 static ValueTag get_literal_value(Expr* expr) {
@@ -179,8 +179,7 @@ static ValueTag get_expr_value(Expr* expr) {
         case EXPR_FN_DEF:
             return get_fn_def_value(expr);
         case EXPR_RETURN:
-            REPORT_ERROR(expr->op_return.op, "cannot typecheck return statement outside of function definition\n");
-            return VAL_ERROR;
+            return VAL_NONE;
     }
 }
 

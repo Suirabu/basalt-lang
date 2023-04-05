@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
-#include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "codegen.h"
@@ -8,39 +8,49 @@
 #include "global.h"
 #include "symbol.h"
 #include "token.h"
+#include "value.h"
 
-// TODO: Use appropriately sized registers for values of different types.
-// Currently we are storing all our values in 64-bit registers which is an issues since YASM infers
-// the size of memory based on the register which is being read from/written to. This means that
-// until we implement the ability to use non-64-bit registers all variables must be 64-bits in size.
-static const char* registers[] = {
-    "r9", "r10", "r11", "r12", "r13", "r14", "r15",
-};
-#define n_registers (sizeof(registers) / sizeof(char*))
+static const char* qregs[] = { "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15" };          // 64-bit registers
+static const char* dregs[] = { "r8d", "r9d", "r10d", "r11d", "r12d", "r13d", "r14d", "r15d" };  // 32-bit registers
+static const char* wregs[] = { "r8w", "r9w", "r10w", "r11w", "r12w", "r13w", "r14w", "r15w" };  // 16-bit registers
+static const char* bregs[] = { "r8b", "r9b", "r10b", "r11b", "r12b", "r13b", "r14b", "r15b" };  // 8-bit registers
+#define n_regs (sizeof(qregs) / sizeof(char*))
 
-static int free_registers[n_registers];
-static size_t n_free_registers = n_registers;
+static int free_regs[n_regs];
+static size_t n_free_regs = n_regs;
 
 static void initialize_registers(void) {
-    for(size_t i = 0; i < n_free_registers; ++i) {
-        free_registers[i] = i;
+    for(size_t i = 0; i < n_free_regs; ++i) {
+        free_regs[i] = i;
     }
 }
 
 static int allocate_register(void) {
-    if(n_free_registers == 0) {
+    if(n_free_regs == 0) {
         fprintf(stderr, "error: failed to allocate register\n");
         return -1;
     }
     
-    return free_registers[--n_free_registers];
+    return free_regs[--n_free_regs];
 }
 
 static void free_register(int reg) {
     if(reg == -1)
         return;
 
-    free_registers[n_free_registers++] = reg;
+    free_regs[n_free_regs++] = reg;
+}
+
+static const char* get_register(int reg, size_t size) {
+    switch(size) {
+        case 1: return bregs[reg];
+        case 2: return wregs[reg];
+        case 4: return dregs[reg];
+        case 8: return qregs[reg];
+        default:
+            fprintf(stderr, "error: invalid register size %lu\n", size);
+            exit(1);
+    };
 }
 
 // TODO: It might make more sense for the caller of write functions to specify
@@ -73,7 +83,7 @@ static void write_globals(FILE* out) {
                     fprintf(out, "    g_%s: resq 1\n", item.identifier);
                     break;
                 case VAL_BOOL:
-                    fprintf(out, "    g_%s: resq 1\n", item.identifier);
+                    fprintf(out, "    g_%s: resb 1\n", item.identifier);
                     break;
 
                 default:
@@ -104,16 +114,16 @@ static int write_literal(Expr* expr, FILE* out) {
     const int reg = allocate_register();
     switch(expr->literal.value.tag) {
         case VAL_INT:
-            fprintf(out, "    mov %s, %i\n", registers[reg], expr->literal.value.val_int);
+            fprintf(out, "    mov %s, %i\n", get_register(reg, SIZE_INT), expr->literal.value.val_int);
             break;
         case VAL_BOOL:
-            fprintf(out, "    mov %s, %i\n", registers[reg], expr->literal.value.val_bool);
+            fprintf(out, "    mov %s, %i\n", get_register(reg, SIZE_BOOL), expr->literal.value.val_bool);
             break;
         case VAL_STRING:
-            fprintf(out, "    mov %s, str_%lu\n", registers[reg], expr->literal.value.global_id);
+            fprintf(out, "    mov %s, str_%lu\n", get_register(reg, SIZE_STRING), expr->literal.value.global_id);
             break;
         case VAL_IDENTIFIER:
-            fprintf(out, "    mov %s, [g_%s]\n", registers[reg], expr->literal.value.identifier);
+            fprintf(out, "    mov %s, [g_%s]\n", get_register(reg, get_type_size(symbol_get(expr->literal.value.identifier)->type)), expr->literal.value.identifier);
             break;
         case VAL_NONE:
         case VAL_ERROR:
@@ -128,14 +138,14 @@ static int write_unary(Expr* expr, FILE* out) {
     const int rhs_reg = write_assembly_for_expr(expr->unary.rhs, out);
     switch(expr->unary.op.type) {
         case TOK_MINUS:
-            fprintf(out, "    neg %s\n", registers[rhs_reg]);
+            fprintf(out, "    neg %s\n", get_register(rhs_reg, SIZE_INT));
             break;
         case TOK_NOT:
             fprintf(out,
                 "    not %s\n"
                 "    and %s, 1\n",
-                registers[rhs_reg],
-                registers[rhs_reg]
+                get_register(rhs_reg, SIZE_BOOL),
+                get_register(rhs_reg, SIZE_BOOL)
             );
             break;
 
@@ -153,20 +163,20 @@ static int write_binary(Expr* expr, FILE* out) {
     switch(expr->binary.op.type) {
         case TOK_PLUS:
             fprintf(out, "    add %s, %s\n",
-                registers[lhs_reg],
-                registers[rhs_reg]
+                get_register(lhs_reg, SIZE_INT),
+                get_register(rhs_reg, SIZE_INT)
             );
             break;
         case TOK_MINUS:
             fprintf(out, "    sub %s, %s\n",
-                registers[lhs_reg],
-                registers[rhs_reg]
+                get_register(lhs_reg, SIZE_INT),
+                get_register(rhs_reg, SIZE_INT)
             );
             break;
         case TOK_STAR:
             fprintf(out, "    imul %s, %s\n",
-                registers[lhs_reg],
-                registers[rhs_reg]
+                get_register(lhs_reg, SIZE_INT),
+                get_register(rhs_reg, SIZE_INT)
             );
             break;
         case TOK_SLASH:
@@ -175,9 +185,9 @@ static int write_binary(Expr* expr, FILE* out) {
                 "    xor rdx, rdx\n"
                 "    idiv %s\n"
                 "    mov %s, rax\n",
-                registers[lhs_reg],
-                registers[rhs_reg],
-                registers[lhs_reg]
+                get_register(lhs_reg, SIZE_INT),
+                get_register(rhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT)
             );
             break;
         case TOK_EQUAL_EQUAL:
@@ -186,10 +196,10 @@ static int write_binary(Expr* expr, FILE* out) {
                 "    mov %s, 0\n"
                 "    mov rax, 1\n"
                 "    cmove %s, rax\n",
-                registers[lhs_reg],
-                registers[rhs_reg],
-                registers[lhs_reg],
-                registers[lhs_reg]
+                get_register(lhs_reg, SIZE_INT),
+                get_register(rhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT)
             );
             break;
          case TOK_BANG_EQUAL:
@@ -198,10 +208,10 @@ static int write_binary(Expr* expr, FILE* out) {
                 "    mov %s, 0\n"
                 "    mov rax, 1\n"
                 "    cmovne %s, rax\n",
-                registers[lhs_reg],
-                registers[rhs_reg],
-                registers[lhs_reg],
-                registers[lhs_reg]
+                get_register(lhs_reg, SIZE_INT),
+                get_register(rhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT)
             );
             break;
         case TOK_LESS:
@@ -210,10 +220,10 @@ static int write_binary(Expr* expr, FILE* out) {
                 "    mov %s, 0\n"
                 "    mov rax, 1\n"
                 "    cmovl %s, rax\n",
-                registers[lhs_reg],
-                registers[rhs_reg],
-                registers[lhs_reg],
-                registers[lhs_reg]
+                get_register(lhs_reg, SIZE_INT),
+                get_register(rhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT)
             );
             break;
         case TOK_LESS_EQUAL:
@@ -222,10 +232,10 @@ static int write_binary(Expr* expr, FILE* out) {
                 "    mov %s, 0\n"
                 "    mov rax, 1\n"
                 "    cmovle %s, rax\n",
-                registers[lhs_reg],
-                registers[rhs_reg],
-                registers[lhs_reg],
-                registers[lhs_reg]
+                get_register(lhs_reg, SIZE_INT),
+                get_register(rhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT)
             );
             break;
         case TOK_GREATER:
@@ -234,10 +244,10 @@ static int write_binary(Expr* expr, FILE* out) {
                 "    mov %s, 0\n"
                 "    mov rax, 1\n"
                 "    cmovg %s, rax\n",
-                registers[lhs_reg],
-                registers[rhs_reg],
-                registers[lhs_reg],
-                registers[lhs_reg]
+                get_register(lhs_reg, SIZE_INT),
+                get_register(rhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT)
             );
             break;
         case TOK_GREATER_EQUAL:
@@ -246,10 +256,10 @@ static int write_binary(Expr* expr, FILE* out) {
                 "    mov %s, 0\n"
                 "    mov rax, 1\n"
                 "    cmovge %s, rax\n",
-                registers[lhs_reg],
-                registers[rhs_reg],
-                registers[lhs_reg],
-                registers[lhs_reg]
+                get_register(lhs_reg, SIZE_INT),
+                get_register(rhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT),
+                get_register(lhs_reg, SIZE_INT)
             );
             break;
         default:
@@ -273,7 +283,7 @@ static int write_if(Expr* expr, FILE* out) {
     fprintf(out,
         "    cmp %s, 0\n"
         "    je _else_%lu\n",
-        registers[cond_reg], count
+        get_register(cond_reg, SIZE_BOOL), count
     );
     for(size_t i = 0; i < expr->if_stmt.if_body_len; ++i)
         free_register(write_assembly_for_expr(expr->if_stmt.if_body[i], out));
@@ -292,7 +302,7 @@ static int write_variable_definition(Expr* expr, FILE* out) {
         return -1;
 
     const int val_reg = write_assembly_for_expr(expr->var_def.initial_value, out);
-    fprintf(out, "    mov [g_%s], %s\n", expr->var_def.identifier, registers[val_reg]);
+    fprintf(out, "    mov [g_%s], %s\n", expr->var_def.identifier, get_register(val_reg, get_type_size(symbol_get(expr->var_def.identifier)->type)));
     free_register(val_reg);
 
     return -1;
@@ -300,9 +310,11 @@ static int write_variable_definition(Expr* expr, FILE* out) {
 
 static int write_assign(Expr* expr, FILE* out) {
     const int val_reg = write_assembly_for_expr(expr->assign.expr, out);
+    const size_t var_size = get_type_size(symbol_get(expr->assign.identifier)->type);
+
     switch(expr->assign.op.type) {
         case TOK_EQUAL:
-            fprintf(out, "    mov [g_%s], %s\n", expr->assign.identifier, registers[val_reg]);
+            fprintf(out, "    mov [g_%s], %s\n", expr->assign.identifier, get_register(val_reg, var_size));
             break;
         case TOK_PLUS_EQUAL: {
             const int temp = allocate_register();
@@ -310,9 +322,9 @@ static int write_assign(Expr* expr, FILE* out) {
                 "    mov %s, [g_%s]\n"
                 "    add %s, %s\n"
                 "    mov [g_%s], %s\n",
-                registers[temp], expr->assign.identifier,
-                registers[temp], registers[val_reg],
-                expr->assign.identifier, registers[temp]
+                get_register(temp, var_size), expr->assign.identifier,
+                get_register(temp, var_size), get_register(val_reg, var_size),
+                expr->assign.identifier, get_register(temp, var_size)
             );
             free_register(temp);
             break;
@@ -323,9 +335,9 @@ static int write_assign(Expr* expr, FILE* out) {
                 "    mov %s, [g_%s]\n"
                 "    sub %s, %s\n"
                 "    mov [g_%s], %s\n",
-                registers[temp], expr->assign.identifier,
-                registers[temp], registers[val_reg],
-                expr->assign.identifier, registers[temp]
+                get_register(temp, var_size), expr->assign.identifier,
+                get_register(temp, var_size), get_register(val_reg, var_size),
+                expr->assign.identifier, get_register(temp, var_size)
             );
             free_register(temp);
             break;
@@ -336,9 +348,9 @@ static int write_assign(Expr* expr, FILE* out) {
                 "    mov %s, [g_%s]\n"
                 "    imul %s, %s\n"
                 "    mov [g_%s], %s\n",
-                registers[temp], expr->assign.identifier,
-                registers[temp], registers[val_reg],
-                expr->assign.identifier, registers[temp]
+                get_register(temp, var_size), expr->assign.identifier,
+                get_register(temp, var_size), get_register(val_reg, var_size),
+                expr->assign.identifier, get_register(temp, var_size)
             );
             free_register(temp);
             break;
@@ -350,7 +362,7 @@ static int write_assign(Expr* expr, FILE* out) {
                 "    idiv %s\n"
                 "    mov [g_%s], rax\n",
                 expr->assign.identifier,
-                registers[val_reg],
+                get_register(val_reg, var_size),
                 expr->assign.identifier
             );
             break;
@@ -369,7 +381,7 @@ static int write_while_loop(Expr* expr, FILE* out) {
     fprintf(out,
         "    cmp %s, 0\n"
         "    jz while_%lu_end\n",
-        registers[cond_reg],
+        get_register(cond_reg, SIZE_BOOL),
         while_count
     );
 
@@ -400,7 +412,7 @@ static int write_return(Expr* expr, FILE* out) {
     fprintf(out,
         "    mov rax, %s\n"
         "    ret\n",
-        registers[write_assembly_for_expr(expr->op_return.value_expr, out)]
+        get_register(write_assembly_for_expr(expr->op_return.value_expr, out), SIZE_INT)
     );
     return -1;
 }
