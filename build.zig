@@ -11,18 +11,18 @@ pub fn build(b: *std.build.Builder) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
 
-    const exe = b.addExecutable("basalt", null);
+    const exe = b.addExecutable("basalt", "src/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
 
     // Link LibC and declare C source files
     exe.linkLibC();
+    exe.addIncludePath("src");
     exe.addCSourceFiles(&.{
         "src/codegen.c",
         "src/expr.c",
         "src/global.c",
         "src/lexer.c",
-        "src/main.c",
         "src/parser.c",
         "src/sema.c",
         "src/symbol.c",
