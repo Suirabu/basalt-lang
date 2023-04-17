@@ -11,6 +11,10 @@ pub fn build(b: *std.build.Builder) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
     const mode = b.standardReleaseOptions();
 
+    // Allows the person running `zig build` to build local documentation using
+    // zig autodoc with the `-Demit-docs` flag.
+    const emit_docs = b.option(bool, "emit-docs", "Generate local documentation") orelse false;
+
     const exe = b.addExecutable("basalt", "src/main.zig");
     exe.setTarget(target);
     exe.setBuildMode(mode);
@@ -30,6 +34,9 @@ pub fn build(b: *std.build.Builder) void {
         "src/typecheck.c",
         "src/value.c",
     }, &.{});
+
+    // Emit local documentation if the `-Demit-docs` flag is enabled
+    exe.emit_docs = if (emit_docs) .emit else .default;
 
     exe.install();
 
