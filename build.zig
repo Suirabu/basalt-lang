@@ -9,15 +9,18 @@ pub fn build(b: *std.build.Builder) void {
 
     // Standard release options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
-    const mode = b.standardReleaseOptions();
+    const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addExecutable("basalt", "src/main.zig");
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
+    const exe = b.addExecutable(.{
+        .name = "basalt",
+        .root_source_file = .{ .path = "src/main.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
 
     // Link LibC and declare C source files
     exe.linkLibC();
-    exe.addIncludePath("src");
+    exe.addIncludePath(.{ .path = "src" });
     exe.addCSourceFiles(&.{
         "src/codegen.c",
         "src/expr.c",
@@ -31,9 +34,9 @@ pub fn build(b: *std.build.Builder) void {
         "src/value.c",
     }, &.{});
 
-    exe.install();
+    b.installArtifact(exe);
 
-    const run_cmd = exe.run();
+    const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
         run_cmd.addArgs(args);
