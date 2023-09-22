@@ -130,6 +130,7 @@ pub fn main() !void {
             debug.assert(result.term.Exited == 0);
             obj_path.len -= 1; // HACK: Ignore null terminator
             try std.fs.cwd().deleteFile(obj_path); // Delete object file
+            obj_path.len += 1; // HACK: Restore null terminator so that `allocator.free()` doesn't fail
         }
     }
 
