@@ -8,7 +8,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
 
     var args = try std.process.argsAlloc(gpa.allocator());
-    defer gpa.allocator().free(args);
+    defer std.process.argsFree(gpa.allocator(), args);
 
     if (args.len != 2) {
         std.log.info("Usage: {s} <file>", .{args[0]});
