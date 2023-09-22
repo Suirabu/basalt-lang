@@ -8,7 +8,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
 
     var args = try std.process.argsAlloc(gpa.allocator());
-    defer gpa.allocator().free(args);
+    defer std.process.argsFree(gpa.allocator(), args);
 
     if (args.len != 2) {
         std.log.info("Usage: {s} <file>", .{args[0]});
@@ -130,6 +130,7 @@ pub fn main() !void {
             debug.assert(result.term.Exited == 0);
             obj_path.len -= 1; // HACK: Ignore null terminator
             try std.fs.cwd().deleteFile(obj_path); // Delete object file
+            obj_path.len += 1; // HACK: Restore null terminator so that `allocator.free()` doesn't fail
         }
     }
 
