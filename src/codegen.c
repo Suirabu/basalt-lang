@@ -409,11 +409,13 @@ static int write_fn_def(Expr* expr, FILE* out) {
 }
 
 static int write_return(Expr* expr, FILE* out) {
+    const int reg = write_assembly_for_expr(expr->op_return.value_expr, out);
     fprintf(out,
         "    mov rax, %s\n"
         "    ret\n",
-        get_register(write_assembly_for_expr(expr->op_return.value_expr, out), SIZE_INT)
+        get_register(reg, SIZE_INT)
     );
+    free_register(reg);
     return -1;
 }
 
