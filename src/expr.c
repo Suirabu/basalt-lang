@@ -2,11 +2,14 @@
 #include <stdio.h>
 
 #include "expr.h"
+#include "parser.h"
+#include "symbol.h"
 #include "token.h"
 
 Expr* expr_create_literal(Value value) {
     Expr* result = malloc(sizeof(Expr));
     result->tag = EXPR_LITERAL;
+    result->parent_fn = parent_fn;
     result->literal.value = value;
     return result;
 }
@@ -14,6 +17,7 @@ Expr* expr_create_literal(Value value) {
 Expr* expr_create_unary(Token op, Expr* rhs) {
     Expr* result = malloc(sizeof(Expr));
     result->tag = EXPR_UNARY;
+    result->parent_fn = parent_fn;
     result->unary.op = op;
     result->unary.rhs = rhs;
     return result;
@@ -22,6 +26,7 @@ Expr* expr_create_unary(Token op, Expr* rhs) {
 Expr* expr_create_binary(Expr* lhs, Token op, Expr* rhs) {
     Expr* result = malloc(sizeof(Expr));
     result->tag = EXPR_BINARY;
+    result->parent_fn = parent_fn;
     result->binary.lhs = lhs;
     result->binary.op = op;
     result->binary.rhs = rhs;
@@ -31,6 +36,7 @@ Expr* expr_create_binary(Expr* lhs, Token op, Expr* rhs) {
 Expr* expr_create_grouping(Expr* expr) {
     Expr* result = malloc(sizeof(Expr));
     result->tag = EXPR_GROUPING;
+    result->parent_fn = parent_fn;
     result->grouping.expr = expr;
     return result;
 }
@@ -38,6 +44,7 @@ Expr* expr_create_grouping(Expr* expr) {
 Expr* expr_create_if(Expr* condition, Expr** if_body, size_t if_body_len, Expr** else_body, size_t else_body_len) {
     Expr* result = malloc(sizeof(Expr));
     result->tag = EXPR_IF;
+    result->parent_fn = parent_fn;
     result->if_stmt.condition = condition;
     result->if_stmt.if_body = if_body;
     result->if_stmt.if_body_len = if_body_len;
@@ -49,6 +56,7 @@ Expr* expr_create_if(Expr* condition, Expr** if_body, size_t if_body_len, Expr**
 Expr* expr_create_var_def(const char* identifier, ValueTag type, Expr* initial_value) {
     Expr* result = malloc(sizeof(Expr));
     result->tag = EXPR_VAR_DEF;
+    result->parent_fn = parent_fn;
     result->var_def.identifier = identifier;
     result->var_def.type = type;
     result->var_def.initial_value = initial_value;
@@ -58,6 +66,7 @@ Expr* expr_create_var_def(const char* identifier, ValueTag type, Expr* initial_v
 Expr* expr_create_assign(const char* identifier, Token op, Expr* expr) {
     Expr* result = malloc(sizeof(Expr));
     result->tag = EXPR_ASSIGN;
+    result->parent_fn = parent_fn;
     result->assign.identifier = identifier;
     result->assign.op = op;
     result->assign.expr = expr;
@@ -67,6 +76,7 @@ Expr* expr_create_assign(const char* identifier, Token op, Expr* expr) {
 Expr* expr_create_while(Expr* condition, Expr** body, size_t body_len) {
     Expr* result = malloc(sizeof(Expr));
     result->tag = EXPR_WHILE;
+    result->parent_fn = parent_fn;
     result->while_loop.condition = condition;
     result->while_loop.body = body;
     result->while_loop.body_len = body_len;
@@ -76,6 +86,7 @@ Expr* expr_create_while(Expr* condition, Expr** body, size_t body_len) {
 Expr* expr_create_fn_def(const char* identifier, const char** param_identifiers, ValueTag* param_types, size_t n_params, ValueTag return_type, struct _Expr** body, size_t body_len) {
     Expr* result = malloc(sizeof(Expr));
     result->tag = EXPR_FN_DEF;
+    result->parent_fn = parent_fn;
     result->fn_def.identifier = identifier;
     result->fn_def.param_identifiers = param_identifiers;
     result->fn_def.param_types = param_types;
@@ -89,6 +100,7 @@ Expr* expr_create_fn_def(const char* identifier, const char** param_identifiers,
 Expr* expr_create_return(Token op, Expr* value_expr) {
     Expr* result = malloc(sizeof(Expr));
     result->tag = EXPR_RETURN;
+    result->parent_fn = parent_fn;
     result->op_return.op = op;
     result->op_return.value_expr = value_expr;
     return result;

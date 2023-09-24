@@ -7,6 +7,8 @@
 #include "expr.h"
 #include "token.h"
 
+extern Symbol* parent_fn;
+
 typedef struct {
     const Token* tokens;
     size_t tp;
