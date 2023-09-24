@@ -1,7 +1,0 @@
-10 == 5
-true == false
-
-10 < 5
-12 >= 7
-
-"Hello, " != "world!"

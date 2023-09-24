@@ -1,0 +1,8 @@
+# we can't call this atm
+fn another_function() bool
+    return true
+end
+
+fn main() int
+    return 0
+end
