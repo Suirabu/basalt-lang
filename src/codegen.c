@@ -303,6 +303,8 @@ static int write_if(Expr* expr, FILE* out) {
         "    je _else_%lu\n",
         get_register(cond_reg, SIZE_BOOL), count
     );
+    free_register(cond_reg);
+
     for(size_t i = 0; i < expr->if_stmt.if_body_len; ++i)
         free_register(write_assembly_for_expr(expr->if_stmt.if_body[i], out));
     fprintf(out, "    jmp _end_%lu\n", count);
