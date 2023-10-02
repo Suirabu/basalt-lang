@@ -1,6 +1,7 @@
 #ifndef EXPR_H
 #define EXPR_H
 
+#include "symbol.h"
 #include "token.h"
 
 typedef enum {
@@ -18,6 +19,7 @@ typedef enum {
 
 typedef struct _Expr {
     ExprTag tag;
+    Symbol* parent_fn;
     union {
         struct { Value value; } literal;
         struct { Token op; struct _Expr* rhs; } unary;

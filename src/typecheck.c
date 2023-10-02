@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "expr.h"
 #include "symbol.h"
@@ -16,8 +17,19 @@ static ValueTag get_expr_value(Expr* expr);
 
 static ValueTag get_literal_value(Expr* expr) {
     switch(expr->literal.value.tag) {
-        case TOK_IDENTIFIER:
-            return symbol_get(expr->literal.value.identifier)->type;
+        case TOK_IDENTIFIER: {
+            if(symbol_exists(expr->literal.value.identifier)) {
+                // this symbol is not guarenteed to be a variable
+                return symbol_get(expr->literal.value.identifier)->type;
+            }
+            if(expr->parent_fn) {
+                for(size_t i = 0; i < expr->parent_fn->n_params; ++i) {
+                    return expr->parent_fn->param_types[i];
+                }
+            }
+            fprintf(stderr, "error: failed to resolve type of identifier '%s'", expr->literal.value.identifier);
+            return VAL_ERROR;
+        }
         default:
             return expr->literal.value.tag;
     }

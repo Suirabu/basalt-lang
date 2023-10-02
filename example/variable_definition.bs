@@ -1,3 +1,0 @@
-var test: int = 10 + 5
-
-test == 15

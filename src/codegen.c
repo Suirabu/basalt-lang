@@ -123,7 +123,25 @@ static int write_literal(Expr* expr, FILE* out) {
             fprintf(out, "    mov %s, str_%lu\n", get_register(reg, SIZE_STRING), expr->literal.value.global_id);
             break;
         case VAL_IDENTIFIER:
-            fprintf(out, "    mov %s, [g_%s]\n", get_register(reg, get_type_size(symbol_get(expr->literal.value.identifier)->type)), expr->literal.value.identifier);
+            if(symbol_exists(expr->literal.value.identifier)) {
+                const Symbol* symbol = symbol_get(expr->literal.value.identifier);
+                if(symbol->stype != SYM_VAR) {
+                    fprintf(stderr, "error: symbol '%s' is not a variable\n", expr->literal.value.identifier);
+                    return -1;
+                }
+                fprintf(out, "    mov %s, [g_%s]\n", get_register(reg, get_type_size(symbol->type)), expr->literal.value.identifier);
+            } else if(expr->parent_fn) {
+                for(size_t i = 0; i < expr->parent_fn->n_params; ++i) {
+                    if(strcmp(expr->parent_fn->param_identifiers[i], expr->literal.value.identifier) == 0) {
+                        size_t parameter_offset = 0;
+                        for(size_t j = 0; j < i; ++j) {
+                            parameter_offset = get_type_size(expr->parent_fn->param_types[j]);
+                        }
+                        fprintf(out, "    mov %s, [rsp + %lu]\n", get_register(reg, get_type_size(expr->parent_fn->param_types[i])), parameter_offset);
+                        break;
+                    }
+                }
+            }
             break;
         case VAL_NONE:
         case VAL_ERROR:
@@ -285,6 +303,8 @@ static int write_if(Expr* expr, FILE* out) {
         "    je _else_%lu\n",
         get_register(cond_reg, SIZE_BOOL), count
     );
+    free_register(cond_reg);
+
     for(size_t i = 0; i < expr->if_stmt.if_body_len; ++i)
         free_register(write_assembly_for_expr(expr->if_stmt.if_body[i], out));
     fprintf(out, "    jmp _end_%lu\n", count);
@@ -399,21 +419,38 @@ static int write_while_loop(Expr* expr, FILE* out) {
     return -1;
 }
 
+static size_t get_fn_stack_size(Symbol* symbol) {
+    size_t stack_size = 0;
+    for(size_t i = 0; i < symbol->n_params; ++i) {
+        stack_size += get_type_size(symbol->param_types[i]);
+    }
+    return stack_size;
+}
+
 // TODO: Parameters
 static int write_fn_def(Expr* expr, FILE* out) {
     fprintf(out, "\nfn_%s:\n", expr->fn_def.identifier);
+
+    const size_t stack_size = get_fn_stack_size(expr->parent_fn);
+    fprintf(out, "    sub rsp, %lu\n", stack_size);
+    
     for(size_t i = 0; i < expr->fn_def.body_len; ++i) {
         free_register(write_assembly_for_expr(expr->fn_def.body[i], out));
     }
+
     return -1;
 }
 
 static int write_return(Expr* expr, FILE* out) {
+    const int reg = write_assembly_for_expr(expr->op_return.value_expr, out);
     fprintf(out,
         "    mov rax, %s\n"
+        "    add rsp, %lu\n"
         "    ret\n",
-        get_register(write_assembly_for_expr(expr->op_return.value_expr, out), SIZE_INT)
+        get_register(reg, SIZE_INT),
+        get_fn_stack_size(expr->parent_fn)
     );
+    free_register(reg);
     return -1;
 }
 

@@ -1,0 +1,11 @@
+var test: int = 0
+
+# we can't call this atm
+fn another_function(a: int, b: int) bool
+    test += a + b
+    return true
+end
+
+fn main() int
+    return 0
+end

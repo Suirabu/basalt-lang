@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "expr.h"
 #include "parser.h"
@@ -8,6 +9,8 @@
 #include "token.h"
 
 // TODO: Error recovery
+
+Symbol* parent_fn = NULL;
 
 static Token peek(const Parser* par) {
     return par->tokens[par->tp];
@@ -74,7 +77,18 @@ Expr* collect_primary(Parser* par) {
     // Variable
     if(match(par, TOK_IDENTIFIER)) {
         const Token iden = previous(par);
-        if(!symbol_exists(iden.value.identifier)) {
+        
+        bool is_parameter = false;
+        if(parent_fn) {
+            for(size_t i = 0; i < parent_fn->n_params; ++i) {
+                if(strcmp(parent_fn->param_identifiers[i], iden.value.identifier) == 0) {
+                    is_parameter = true;
+                }
+            }
+        }
+
+        if(!symbol_exists(iden.value.identifier) && !is_parameter) {
+
             fprintf(stderr, "%s:%lu:%lu: error: use of undefined variable %s\n",
                 iden.source_path, iden.line + 1, iden.column + 1,
                 iden.value.identifier
@@ -338,6 +352,8 @@ static Expr* collect_fn_def(Parser* par) {
 
     check_type(par);
     const ValueTag return_type = token_type_to_value_tag(advance(par).type);
+    
+    parent_fn = symbol_add_fn(identifier.value.identifier, param_types, (const char**)param_identifiers, n_params, return_type);
 
     Expr** body = NULL;
     size_t body_len = 0;
@@ -349,8 +365,9 @@ static Expr* collect_fn_def(Parser* par) {
         body[body_len++] = expr;
     }
 
-    symbol_add_fn(identifier.value.identifier, param_types, n_params, return_type);
-    return expr_create_fn_def(identifier.value.identifier, (const char**)param_identifiers, param_types, n_params, return_type, body, body_len);
+    Expr* result = expr_create_fn_def(identifier.value.identifier, (const char**)param_identifiers, param_types, n_params, return_type, body, body_len);
+    parent_fn = NULL;
+    return result;
 }
 
 Expr* collect_return(Parser* par) {

@@ -7,7 +7,7 @@
 Symbol* symbol_table = NULL;
 size_t symbol_table_len = 0;
 
-void symbol_add_var(const char* identifier, ValueTag type) {
+Symbol* symbol_add_var(const char* identifier, ValueTag type) {
     ++symbol_table_len;
     symbol_table = realloc(symbol_table, sizeof(Symbol) * symbol_table_len);
     symbol_table[symbol_table_len - 1] = (Symbol) {
@@ -15,18 +15,21 @@ void symbol_add_var(const char* identifier, ValueTag type) {
         .type = type,
         .stype = SYM_VAR,
     };
+    return &symbol_table[symbol_table_len - 1];
 }
 
-void symbol_add_fn(const char* identifier, ValueTag* param_types, size_t n_params, ValueTag return_type) {
+Symbol* symbol_add_fn(const char* identifier, ValueTag* param_types, const char** param_identifiers, size_t n_params, ValueTag return_type) {
     ++symbol_table_len;
     symbol_table = realloc(symbol_table, sizeof(Symbol) * symbol_table_len);
     symbol_table[symbol_table_len - 1] = (Symbol) {
         .identifier = identifier,
         .param_types = param_types,
+        .param_identifiers = param_identifiers,
         .n_params = n_params,
         .return_type = return_type,
         .stype = SYM_FN,
     };
+    return &symbol_table[symbol_table_len - 1];
 }
 
 const Symbol* symbol_get(const char* identifier) {
