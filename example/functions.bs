@@ -1,11 +1,7 @@
-var test: int = 0
-
-# we can't call this atm
-fn another_function(a: int, b: int) bool
-    test += a + b
-    return true
+fn add(a: int, b: int) int
+    return a + b
 end
 
 fn main() int
-    return 0
+    return add(2, 5)
 end

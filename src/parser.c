@@ -10,7 +10,7 @@
 
 // TODO: Error recovery
 
-Symbol* parent_fn = NULL;
+Symbol parent_fn = (Symbol) { .exists = false };
 
 static Token peek(const Parser* par) {
     return par->tokens[par->tp];
@@ -22,6 +22,10 @@ static Token previous(const Parser* par) {
 
 static Token advance(Parser* par) {
     return par->tokens[par->tp++];
+}
+
+static void undo_advance(Parser* par) {
+    --par->tp;
 }
 
 static bool check(Parser* par, TokenType type) {
@@ -69,34 +73,40 @@ static bool check_type(Parser* par) {
     return true;
 }
 
+Expr* collect_fn_call(Parser* par);
+
 Expr* collect_primary(Parser* par) {
     if(match(par, TOK_INT) || match(par, TOK_BOOL) || match(par, TOK_STRING)) {
         return expr_create_literal(previous(par).value);
     }
 
-    // Variable
     if(match(par, TOK_IDENTIFIER)) {
-        const Token iden = previous(par);
-        
-        bool is_parameter = false;
-        if(parent_fn) {
-            for(size_t i = 0; i < parent_fn->n_params; ++i) {
-                if(strcmp(parent_fn->param_identifiers[i], iden.value.identifier) == 0) {
-                    is_parameter = true;
+        // Function call
+        if(check(par, TOK_LEFT_PAREN)) {
+            return collect_fn_call(par);
+        } else {
+            // Variable
+            const Token iden = previous(par);
+            
+            bool is_parameter = false;
+            if(parent_fn.exists) {
+                for(size_t i = 0; i < parent_fn.n_params; ++i) {
+                    if(strcmp(parent_fn.param_identifiers[i], iden.value.identifier) == 0) {
+                        is_parameter = true;
+                    }
                 }
             }
+
+            if(!symbol_exists(iden.value.identifier) && !is_parameter) {
+                fprintf(stderr, "%s:%lu:%lu: error: use of undefined variable %s\n",
+                    iden.source_path, iden.line + 1, iden.column + 1,
+                    iden.value.identifier
+                );
+                return NULL;
+            }
+
+            return expr_create_literal(iden.value);
         }
-
-        if(!symbol_exists(iden.value.identifier) && !is_parameter) {
-
-            fprintf(stderr, "%s:%lu:%lu: error: use of undefined variable %s\n",
-                iden.source_path, iden.line + 1, iden.column + 1,
-                iden.value.identifier
-            );
-            return NULL;
-        }
-
-        return expr_create_literal(iden.value);
     }
 
     if(match(par, TOK_LEFT_PAREN)) {
@@ -366,7 +376,7 @@ static Expr* collect_fn_def(Parser* par) {
     }
 
     Expr* result = expr_create_fn_def(identifier.value.identifier, (const char**)param_identifiers, param_types, n_params, return_type, body, body_len);
-    parent_fn = NULL;
+    parent_fn = (Symbol) { .exists = false };
     return result;
 }
 
@@ -374,6 +384,60 @@ Expr* collect_return(Parser* par) {
     const Token op = previous(par);
     const Expr* value_expr = parser_collect_expr(par);
     return expr_create_return(op, (Expr*)value_expr);
+}
+
+Expr* collect_fn_call(Parser* par) {
+    const Token identifier = previous(par);
+
+    const Symbol fn_symbol = symbol_get(identifier.value.identifier);
+
+    if(fn_symbol.stype != SYM_FN) {
+        fprintf(stderr, "%s:%lu:%lu: error: attempted to call non function '%s'\n",
+            identifier.source_path, identifier.line + 1, identifier.column + 1,
+            identifier.value.identifier
+        );
+        return NULL;
+    }
+    
+    expect(par, TOK_LEFT_PAREN);
+
+    size_t n_params = 0;
+    Expr** param_exprs = NULL;
+
+    while(peek(par).type != TOK_RIGHT_PAREN) {
+        Expr* expr = collect_assignment(par);
+
+        ++n_params;
+        param_exprs = (Expr**)realloc(param_exprs, sizeof(Expr*) * n_params);
+        param_exprs[n_params - 1] = expr;
+
+        const Token tok = peek(par);
+
+        if(tok.type == TOK_RIGHT_PAREN)
+            break;
+
+        if(tok.type != TOK_COMMA) {
+            fprintf(stderr, "%s:%lu:%lu: error: expected comma or right paren, found %s instead\n",
+                tok.source_path, tok.line + 1, tok.column + 1, token_strs[tok.type]
+            );
+            free(param_exprs);
+            return NULL;
+        }
+
+        advance(par);
+    }
+
+    advance(par);
+
+    if(n_params != fn_symbol.n_params) {
+        fprintf(stderr, "%s:%lu:%lu: error: function '%s' expects %lu parameters, but only %lu were provided\n",
+            identifier.source_path, identifier.line + 1, identifier.column + 1,
+            identifier.value.identifier,
+            fn_symbol.n_params, n_params
+        );
+    }
+
+    return expr_create_fn_call(fn_symbol, param_exprs);
 }
 
 Expr* collect_statement(Parser* par) {

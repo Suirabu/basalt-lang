@@ -13,6 +13,7 @@ typedef enum {
 } StructType;
 
 typedef struct {
+    bool exists;
     const char* identifier;
     ValueTag type;
     StructType stype;
@@ -25,9 +26,9 @@ typedef struct {
 extern Symbol* symbol_table;
 extern size_t symbol_table_len;
 
-Symbol* symbol_add_var(const char* identifier, ValueTag type);
-Symbol* symbol_add_fn(const char* identifier, ValueTag* param_types, const char** param_identifiers, size_t n_params, ValueTag return_type);
-const Symbol* symbol_get(const char* identifier);
+Symbol symbol_add_var(const char* identifier, ValueTag type);
+Symbol symbol_add_fn(const char* identifier, ValueTag* param_types, const char** param_identifiers, size_t n_params, ValueTag return_type);
+Symbol symbol_get(const char* identifier);
 bool symbol_exists(const char* identifier);
 
 #endif // SYMBOL_H

@@ -97,6 +97,15 @@ Expr* expr_create_fn_def(const char* identifier, const char** param_identifiers,
     return result;    
 }
 
+Expr* expr_create_fn_call(const Symbol fn_symbol, struct _Expr** param_exprs) {
+    Expr* result = malloc(sizeof(Expr));
+    result->tag = EXPR_FN_CALL;
+    result->parent_fn = parent_fn;
+    result->fn_call.fn_symbol = fn_symbol;
+    result->fn_call.param_exprs = param_exprs;
+    return result;
+}
+
 Expr* expr_create_return(Token op, Expr* value_expr) {
     Expr* result = malloc(sizeof(Expr));
     result->tag = EXPR_RETURN;

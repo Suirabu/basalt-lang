@@ -124,20 +124,20 @@ static int write_literal(Expr* expr, FILE* out) {
             break;
         case VAL_IDENTIFIER:
             if(symbol_exists(expr->literal.value.identifier)) {
-                const Symbol* symbol = symbol_get(expr->literal.value.identifier);
-                if(symbol->stype != SYM_VAR) {
+                const Symbol symbol = symbol_get(expr->literal.value.identifier);
+                if(symbol.stype != SYM_VAR) {
                     fprintf(stderr, "error: symbol '%s' is not a variable\n", expr->literal.value.identifier);
                     return -1;
                 }
-                fprintf(out, "    mov %s, [g_%s]\n", get_register(reg, get_type_size(symbol->type)), expr->literal.value.identifier);
-            } else if(expr->parent_fn) {
-                for(size_t i = 0; i < expr->parent_fn->n_params; ++i) {
-                    if(strcmp(expr->parent_fn->param_identifiers[i], expr->literal.value.identifier) == 0) {
+                fprintf(out, "    mov %s, [g_%s]\n", get_register(reg, get_type_size(symbol.type)), expr->literal.value.identifier);
+            } else if(expr->parent_fn.exists) {
+                for(size_t i = 0; i < expr->parent_fn.n_params; ++i) {
+                    if(strcmp(expr->parent_fn.param_identifiers[i], expr->literal.value.identifier) == 0) {
                         size_t parameter_offset = 0;
                         for(size_t j = 0; j < i; ++j) {
-                            parameter_offset = get_type_size(expr->parent_fn->param_types[j]);
+                            parameter_offset = get_type_size(expr->parent_fn.param_types[j]);
                         }
-                        fprintf(out, "    mov %s, [rsp + %lu]\n", get_register(reg, get_type_size(expr->parent_fn->param_types[i])), parameter_offset);
+                        fprintf(out, "    mov %s, [rsp + %lu]\n", get_register(reg, get_type_size(expr->parent_fn.param_types[i])), parameter_offset);
                         break;
                     }
                 }
@@ -322,7 +322,7 @@ static int write_variable_definition(Expr* expr, FILE* out) {
         return -1;
 
     const int val_reg = write_assembly_for_expr(expr->var_def.initial_value, out);
-    fprintf(out, "    mov [g_%s], %s\n", expr->var_def.identifier, get_register(val_reg, get_type_size(symbol_get(expr->var_def.identifier)->type)));
+    fprintf(out, "    mov [g_%s], %s\n", expr->var_def.identifier, get_register(val_reg, get_type_size(symbol_get(expr->var_def.identifier).type)));
     free_register(val_reg);
 
     return -1;
@@ -330,7 +330,7 @@ static int write_variable_definition(Expr* expr, FILE* out) {
 
 static int write_assign(Expr* expr, FILE* out) {
     const int val_reg = write_assembly_for_expr(expr->assign.expr, out);
-    const size_t var_size = get_type_size(symbol_get(expr->assign.identifier)->type);
+    const size_t var_size = get_type_size(symbol_get(expr->assign.identifier).type);
 
     switch(expr->assign.op.type) {
         case TOK_EQUAL:
@@ -419,21 +419,29 @@ static int write_while_loop(Expr* expr, FILE* out) {
     return -1;
 }
 
-static size_t get_fn_stack_size(Symbol* symbol) {
+static size_t get_fn_stack_size(Symbol symbol) {
     size_t stack_size = 0;
-    for(size_t i = 0; i < symbol->n_params; ++i) {
-        stack_size += get_type_size(symbol->param_types[i]);
+    for(size_t i = 0; i < symbol.n_params; ++i) {
+        stack_size += get_type_size(symbol.param_types[i]);
     }
     return stack_size;
 }
 
-// TODO: Parameters
 static int write_fn_def(Expr* expr, FILE* out) {
     fprintf(out, "\nfn_%s:\n", expr->fn_def.identifier);
 
-    const size_t stack_size = get_fn_stack_size(expr->parent_fn);
-    fprintf(out, "    sub rsp, %lu\n", stack_size);
-    
+    if(expr->fn_def.n_params) {
+        const size_t stack_size = get_fn_stack_size(expr->parent_fn);
+        fprintf(out, "    enter %lu, 0\n", stack_size);
+        
+        size_t offset = 0;
+        for(size_t i = 0; i < expr->fn_def.n_params; ++i) {
+            const size_t type_size = get_type_size(expr->fn_def.param_types[i]);
+            fprintf(out, "    mov [rsp + %lu], %s\n", offset, get_register(i, type_size));
+            offset += type_size;
+        }
+    }
+
     for(size_t i = 0; i < expr->fn_def.body_len; ++i) {
         free_register(write_assembly_for_expr(expr->fn_def.body[i], out));
     }
@@ -441,15 +449,41 @@ static int write_fn_def(Expr* expr, FILE* out) {
     return -1;
 }
 
+static int write_fn_call(Expr* expr, FILE* out) {
+    for(size_t i = 0; i < expr->fn_call.fn_symbol.n_params; ++i) {
+        const int reg = write_assembly_for_expr(expr->fn_call.param_exprs[i], out);
+        if(reg == -1) {
+            return -1;
+        }
+
+        const size_t type_size = get_type_size(expr->fn_call.fn_symbol.param_types[i]);
+        fprintf(out, "    mov %s, %s\n", get_register(i, type_size), get_register(reg, type_size));
+
+        free_register(reg);
+    }
+    
+    const int reg = allocate_register();
+
+    fprintf(out,
+        "    call fn_%s\n"
+        "    mov %s, rax\n",
+        expr->fn_call.fn_symbol.identifier,
+        get_register(reg, get_type_size(expr->fn_call.fn_symbol.return_type))
+    );
+
+    return reg;
+}
+
 static int write_return(Expr* expr, FILE* out) {
     const int reg = write_assembly_for_expr(expr->op_return.value_expr, out);
-    fprintf(out,
-        "    mov rax, %s\n"
-        "    add rsp, %lu\n"
-        "    ret\n",
-        get_register(reg, SIZE_INT),
-        get_fn_stack_size(expr->parent_fn)
-    );
+    fprintf(out, "    mov rax, %s\n", get_register(reg, SIZE_INT));
+
+    if(expr->parent_fn.n_params) {
+        fprintf(out, "    leave\n");
+    }
+
+    fprintf(out, "    ret\n");
+
     free_register(reg);
     return -1;
 }
@@ -474,6 +508,8 @@ static int write_assembly_for_expr(Expr* expr, FILE* out) {
             return write_while_loop(expr, out);
         case EXPR_FN_DEF:
             return write_fn_def(expr, out);
+        case EXPR_FN_CALL:
+            return write_fn_call(expr, out);
         case EXPR_RETURN:
             return write_return(expr, out);
     }

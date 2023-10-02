@@ -14,12 +14,13 @@ typedef enum {
     EXPR_ASSIGN,
     EXPR_WHILE,
     EXPR_FN_DEF,
+    EXPR_FN_CALL,
     EXPR_RETURN,
 } ExprTag;
 
 typedef struct _Expr {
     ExprTag tag;
-    Symbol* parent_fn;
+    Symbol parent_fn;
     union {
         struct { Value value; } literal;
         struct { Token op; struct _Expr* rhs; } unary;
@@ -57,6 +58,10 @@ typedef struct _Expr {
             size_t body_len;
         } fn_def;
         struct {
+            Symbol fn_symbol;
+            struct _Expr** param_exprs;
+        } fn_call;
+        struct {
             Token op;
             struct _Expr* value_expr;
         } op_return;
@@ -72,6 +77,7 @@ Expr* expr_create_var_def(const char* identifier, ValueTag type, Expr* initial_v
 Expr* expr_create_assign(const char* identifier, Token op, Expr* expr);
 Expr* expr_create_while(Expr* condition, Expr** body, size_t body_len);
 Expr* expr_create_fn_def(const char* identifier, const char** param_identifiers, ValueTag* param_types, size_t n_params, ValueTag return_type, struct _Expr** body, size_t body_len);
+Expr* expr_create_fn_call(const Symbol fn_symbol, struct _Expr** param_exprs);
 Expr* expr_create_return(Token op, Expr* value_expr);
 void expr_free(Expr* expr);
 

@@ -20,11 +20,11 @@ static ValueTag get_literal_value(Expr* expr) {
         case TOK_IDENTIFIER: {
             if(symbol_exists(expr->literal.value.identifier)) {
                 // this symbol is not guarenteed to be a variable
-                return symbol_get(expr->literal.value.identifier)->type;
+                return symbol_get(expr->literal.value.identifier).type;
             }
-            if(expr->parent_fn) {
-                for(size_t i = 0; i < expr->parent_fn->n_params; ++i) {
-                    return expr->parent_fn->param_types[i];
+            if(expr->parent_fn.exists) {
+                for(size_t i = 0; i < expr->parent_fn.n_params; ++i) {
+                    return expr->parent_fn.param_types[i];
                 }
             }
             fprintf(stderr, "error: failed to resolve type of identifier '%s'", expr->literal.value.identifier);
@@ -126,7 +126,7 @@ static ValueTag get_var_def_value(Expr* expr) {
 }
 
 static ValueTag get_assign_value(Expr* expr) {
-    ValueTag expected_type = symbol_get(expr->assign.identifier)->type;
+    ValueTag expected_type = symbol_get(expr->assign.identifier).type;
     ValueTag expr_type = get_expr_value(expr->assign.expr);
 
     if(expected_type != expr_type) {
@@ -170,6 +170,10 @@ static ValueTag get_fn_def_value(Expr* expr) {
     return VAL_NONE;
 }
 
+static ValueTag get_fn_call_value(Expr* expr) {
+    return expr->fn_call.fn_symbol.return_type;
+}
+
 static ValueTag get_expr_value(Expr* expr) {
     switch(expr->tag) {
         case EXPR_LITERAL:
@@ -190,6 +194,8 @@ static ValueTag get_expr_value(Expr* expr) {
             return get_while_value(expr);
         case EXPR_FN_DEF:
             return get_fn_def_value(expr);
+        case EXPR_FN_CALL:
+            return get_fn_call_value(expr);
         case EXPR_RETURN:
             return VAL_NONE;
     }
