@@ -8,15 +8,13 @@ rewritten in Basalt I will then continue to add more features to the language.
 
 ## Building
 
-To build the initial bootstrap compiler you must have the latest stable release of the 
-[Zig compiler](https://ziglang.org/download/) (currently version 0.10.1) installed on your system.
-You can then build the bootstrap compiler with the following command:
+Use GNU Make to compile the initial bootstrap compiler (currently the only compiler).
 
-```
-$ zig build
+```sh
+$ make
 ```
 
-The resulting binary can then be found in `zig-out/bin/`.
+The resulting binary can then be found in the `bin` directory.
 
 ## License
 
